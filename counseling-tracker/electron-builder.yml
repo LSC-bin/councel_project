@@ -1,0 +1,9 @@
+appId: com.edut1287.counseling-tracker
+productName: 상담기록관리
+directories:
+  output: release
+win:
+  target: portable
+files:
+  - out/**/*
+  - package.json

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import initSqlJs, { type Database as SqlJsDatabase, type SqlValue } from 'sql.js';
 import { app } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,7 +41,6 @@ const DEFAULT_TEMPLATES: Record<string, string[]> = {
   '정서·심리': ['정서적 어려움 호소 - Wee클래스 연계 안내']
 };
 
-// schema.sql과 내용이 동일합니다. 빌드 산출물 경로 문제를 피하기 위해 문자열로 내장합니다.
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS students (
     id INTEGER PRIMARY KEY,
@@ -86,42 +85,78 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `;
 
-let db: Database.Database;
+let db: SqlJsDatabase;
+let dbFilePath: string;
 
-export function initDatabase(): Database.Database {
+// ---------- 초기화 / 영속화 ----------
+// sql.js는 DB 전체를 메모리에서 다루므로, 쓰기 작업 직후마다 파일로 저장(persist)한다.
+// 상담 기록 관리 프로그램 특성상 데이터량이 크지 않아 매번 저장해도 성능에 무리가 없다.
+export async function initDatabase(): Promise<SqlJsDatabase> {
+  const SQL = await initSqlJs({
+    locateFile: (file) => path.join(require.resolve('sql.js/dist/sql-wasm.wasm'))
+  });
+
   const userDataPath = app.getPath('userData');
   if (!fs.existsSync(userDataPath)) fs.mkdirSync(userDataPath, { recursive: true });
-  const dbPath = path.join(userDataPath, 'counseling.db');
+  dbFilePath = path.join(userDataPath, 'counseling.sqlite');
 
-  db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  if (fs.existsSync(dbFilePath)) {
+    const buffer = fs.readFileSync(dbFilePath);
+    db = new SQL.Database(buffer);
+  } else {
+    db = new SQL.Database();
+  }
+
   db.exec(SCHEMA);
-
   seedDefaults();
+  persist();
   return db;
+}
+
+function persist() {
+  const data = db.export();
+  fs.writeFileSync(dbFilePath, Buffer.from(data));
+}
+
+// ---------- 쿼리 헬퍼 ----------
+function all<T = Record<string, SqlValue>>(sql: string, params: SqlValue[] = []): T[] {
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const rows: T[] = [];
+  while (stmt.step()) rows.push(stmt.getAsObject() as T);
+  stmt.free();
+  return rows;
+}
+
+function get<T = Record<string, SqlValue>>(sql: string, params: SqlValue[] = []): T | undefined {
+  const rows = all<T>(sql, params);
+  return rows[0];
+}
+
+function run(sql: string, params: SqlValue[] = []) {
+  db.run(sql, params);
+  persist();
+}
+
+function lastInsertId(): number {
+  const row = get<{ id: number }>('SELECT last_insert_rowid() as id');
+  return row ? Number(row.id) : 0;
 }
 
 function seedDefaults() {
-  const typeCount = (db.prepare('SELECT COUNT(*) as c FROM consult_types').get() as { c: number }).c;
+  const typeCount = Number(get<{ c: number }>('SELECT COUNT(*) as c FROM consult_types')?.c ?? 0);
   if (typeCount === 0) {
-    const insertType = db.prepare('INSERT INTO consult_types (name, color) VALUES (?, ?)');
-    const insertTemplate = db.prepare('INSERT INTO quick_templates (type_id, text) VALUES (?, ?)');
-    const tx = db.transaction(() => {
-      for (const t of DEFAULT_TYPES) {
-        const info = insertType.run(t.name, t.color);
-        const templates = DEFAULT_TEMPLATES[t.name];
-        if (templates) {
-          for (const text of templates) insertTemplate.run(info.lastInsertRowid, text);
+    for (const t of DEFAULT_TYPES) {
+      db.run('INSERT INTO consult_types (name, color) VALUES (?, ?)', [t.name, t.color]);
+      const typeId = lastInsertId();
+      const templates = DEFAULT_TEMPLATES[t.name];
+      if (templates) {
+        for (const text of templates) {
+          db.run('INSERT INTO quick_templates (type_id, text) VALUES (?, ?)', [typeId, text]);
         }
       }
-    });
-    tx();
+    }
   }
-}
-
-export function getDb() {
-  return db;
 }
 
 // ---------- 학생 ----------
@@ -130,46 +165,38 @@ export function importStudentsFromExcel(filePath: string) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<{ 이름?: string; 학번?: string | number; 번호?: string | number }>(sheet);
 
-  const insert = db.prepare('INSERT INTO students (name, student_no, active) VALUES (?, ?, 1)');
-  const tx = db.transaction((rows: any[]) => {
-    let count = 0;
-    for (const row of rows) {
-      const name = row['이름'];
-      if (!name) continue;
-      const studentNo = row['학번'] != null ? String(row['학번']) : null;
-      insert.run(name, studentNo);
-      count++;
-    }
-    return count;
-  });
-  const imported = tx(rows);
-  return { imported };
+  let count = 0;
+  for (const row of rows) {
+    const name = row['이름'];
+    if (!name) continue;
+    const studentNo = row['학번'] != null ? String(row['학번']) : null;
+    db.run('INSERT INTO students (name, student_no, active) VALUES (?, ?, 1)', [name, studentNo]);
+    count++;
+  }
+  persist();
+  return { imported: count };
 }
 
 export function getStudents(activeOnly = true) {
-  const query = activeOnly
-    ? 'SELECT * FROM students WHERE active = 1 ORDER BY name'
-    : 'SELECT * FROM students ORDER BY name';
-  return db.prepare(query).all();
+  return activeOnly
+    ? all('SELECT * FROM students WHERE active = 1 ORDER BY name')
+    : all('SELECT * FROM students ORDER BY name');
 }
 
 export function togglePin(studentId: number) {
-  db.prepare('UPDATE students SET pinned = NOT pinned WHERE id = ?').run(studentId);
-  return db.prepare('SELECT * FROM students WHERE id = ?').get(studentId);
+  run('UPDATE students SET pinned = NOT pinned WHERE id = ?', [studentId]);
+  return get('SELECT * FROM students WHERE id = ?', [studentId]);
 }
 
 export function archiveCurrentYear(yearLabel: string) {
-  const tx = db.transaction(() => {
-    db.prepare('UPDATE students SET archived_year = ?, active = 0 WHERE active = 1').run(yearLabel);
-  });
-  tx();
+  run('UPDATE students SET archived_year = ?, active = 0 WHERE active = 1', [yearLabel]);
   return { ok: true };
 }
 
 // ---------- 상담 기록 ----------
 export function getRecords(filter: RecordFilter = {}) {
   const clauses: string[] = [];
-  const params: any[] = [];
+  const params: SqlValue[] = [];
 
   if (filter.studentQuery) {
     clauses.push('s.name LIKE ?');
@@ -192,139 +219,138 @@ export function getRecords(filter: RecordFilter = {}) {
   const order = filter.order === 'asc' ? 'ASC' : 'DESC';
   const limit = filter.limit ? `LIMIT ${Number(filter.limit)}` : '';
 
-  return db
-    .prepare(
-      `SELECT r.*, s.name as student_name, t.name as type_name, t.color as type_color
-       FROM consult_records r
-       JOIN students s ON s.id = r.student_id
-       LEFT JOIN consult_types t ON t.id = r.type_id
-       ${where}
-       ORDER BY r.record_date ${order}, r.id ${order}
-       ${limit}`
-    )
-    .all(...params);
+  return all(
+    `SELECT r.*, s.name as student_name, t.name as type_name, t.color as type_color
+     FROM consult_records r
+     JOIN students s ON s.id = r.student_id
+     LEFT JOIN consult_types t ON t.id = r.type_id
+     ${where}
+     ORDER BY r.record_date ${order}, r.id ${order}
+     ${limit}`,
+    params
+  );
 }
 
 export function addRecord(record: NewRecord) {
-  const info = db
-    .prepare(
-      `INSERT INTO consult_records
-        (student_id, type_id, record_date, content, state_score, follow_up_needed, next_appointment, referred_to, reflected_in_nice)
-       VALUES (@student_id, @type_id, @record_date, @content, @state_score, @follow_up_needed, @next_appointment, @referred_to, @reflected_in_nice)`
-    )
-    .run({
-      student_id: record.student_id,
-      type_id: record.type_id,
-      record_date: record.record_date,
-      content: record.content ?? '',
-      state_score: record.state_score ?? null,
-      follow_up_needed: record.follow_up_needed ? 1 : 0,
-      next_appointment: record.next_appointment ?? null,
-      referred_to: record.referred_to ?? '',
-      reflected_in_nice: record.reflected_in_nice ? 1 : 0
-    });
-  return db.prepare('SELECT * FROM consult_records WHERE id = ?').get(info.lastInsertRowid);
+  db.run(
+    `INSERT INTO consult_records
+      (student_id, type_id, record_date, content, state_score, follow_up_needed, next_appointment, referred_to, reflected_in_nice)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      record.student_id,
+      record.type_id,
+      record.record_date,
+      record.content ?? '',
+      record.state_score ?? null,
+      record.follow_up_needed ? 1 : 0,
+      record.next_appointment ?? null,
+      record.referred_to ?? '',
+      record.reflected_in_nice ? 1 : 0
+    ]
+  );
+  const id = lastInsertId();
+  persist();
+  return get('SELECT * FROM consult_records WHERE id = ?', [id]);
 }
 
 export function updateRecord(id: number, patch: Partial<NewRecord>) {
-  const fields = Object.keys(patch);
-  if (fields.length === 0) return db.prepare('SELECT * FROM consult_records WHERE id = ?').get(id);
-  const setClause = fields.map((f) => `${f} = @${f}`).join(', ');
-  db.prepare(`UPDATE consult_records SET ${setClause} WHERE id = @id`).run({ ...patch, id });
-  return db.prepare('SELECT * FROM consult_records WHERE id = ?').get(id);
+  const fields = Object.keys(patch) as (keyof NewRecord)[];
+  if (fields.length > 0) {
+    const setClause = fields.map((f) => `${f} = ?`).join(', ');
+    const values = fields.map((f) => {
+      const v = patch[f];
+      if (typeof v === 'boolean') return v ? 1 : 0;
+      return v ?? null;
+    }) as SqlValue[];
+    run(`UPDATE consult_records SET ${setClause} WHERE id = ?`, [...values, id]);
+  }
+  return get('SELECT * FROM consult_records WHERE id = ?', [id]);
 }
 
 export function deleteRecord(id: number) {
-  db.prepare('DELETE FROM consult_records WHERE id = ?').run(id);
+  run('DELETE FROM consult_records WHERE id = ?', [id]);
   return { ok: true };
 }
 
 // ---------- 통계 / 위기감지 ----------
 export function getMonthlyStats() {
-  const monthly = db
-    .prepare(
-      `SELECT strftime('%Y-%m', record_date) as month, COUNT(*) as count
-       FROM consult_records
-       GROUP BY month
-       ORDER BY month DESC
-       LIMIT 12`
-    )
-    .all();
+  const monthly = all(
+    `SELECT strftime('%Y-%m', record_date) as month, COUNT(*) as count
+     FROM consult_records
+     GROUP BY month
+     ORDER BY month DESC
+     LIMIT 12`
+  );
 
-  const byType = db
-    .prepare(
-      `SELECT t.name as type_name, t.color as type_color, COUNT(*) as count
-       FROM consult_records r
-       JOIN consult_types t ON t.id = r.type_id
-       GROUP BY r.type_id
-       ORDER BY count DESC`
-    )
-    .all();
+  const byType = all(
+    `SELECT t.name as type_name, t.color as type_color, COUNT(*) as count
+     FROM consult_records r
+     JOIN consult_types t ON t.id = r.type_id
+     GROUP BY r.type_id
+     ORDER BY count DESC`
+  );
 
-  const thisMonthCount = (
-    db
-      .prepare(`SELECT COUNT(*) as c FROM consult_records WHERE record_date >= date('now', 'start of month')`)
-      .get() as { c: number }
-  ).c;
+  const thisMonthCount = Number(
+    get<{ c: number }>(`SELECT COUNT(*) as c FROM consult_records WHERE record_date >= date('now', 'start of month')`)
+      ?.c ?? 0
+  );
 
-  const followUpPending = (
-    db.prepare(`SELECT COUNT(*) as c FROM consult_records WHERE follow_up_needed = 1 AND follow_up_done = 0`).get() as {
-      c: number;
-    }
-  ).c;
+  const followUpPending = Number(
+    get<{ c: number }>(
+      `SELECT COUNT(*) as c FROM consult_records WHERE follow_up_needed = 1 AND follow_up_done = 0`
+    )?.c ?? 0
+  );
 
-  const studentCount = (db.prepare('SELECT COUNT(*) as c FROM students WHERE active = 1').get() as { c: number }).c;
+  const studentCount = Number(get<{ c: number }>('SELECT COUNT(*) as c FROM students WHERE active = 1')?.c ?? 0);
 
   return { monthly, byType, thisMonthCount, followUpPending, studentCount };
 }
 
 export function getStudentRanking(limit = 10) {
-  return db
-    .prepare(
-      `SELECT s.id as student_id, s.name, COUNT(*) as count
-       FROM consult_records r
-       JOIN students s ON s.id = r.student_id
-       GROUP BY r.student_id
-       ORDER BY count DESC
-       LIMIT ?`
-    )
-    .all(limit);
+  return all(
+    `SELECT s.id as student_id, s.name, COUNT(*) as count
+     FROM consult_records r
+     JOIN students s ON s.id = r.student_id
+     GROUP BY r.student_id
+     ORDER BY count DESC
+     LIMIT ?`,
+    [limit]
+  );
 }
 
 export function getCrisisAlerts() {
   const thresholdDays = Number(getSetting('crisis_threshold_days') ?? 14);
   const thresholdCount = Number(getSetting('crisis_threshold_count') ?? 3);
-  return db
-    .prepare(
-      `SELECT r.student_id, s.name, COUNT(*) as count
-       FROM consult_records r
-       JOIN students s ON s.id = r.student_id
-       WHERE r.record_date >= date('now', '-' || ? || ' days')
-       GROUP BY r.student_id
-       HAVING count >= ?`
-    )
-    .all(thresholdDays, thresholdCount);
+  return all(
+    `SELECT r.student_id, s.name, COUNT(*) as count
+     FROM consult_records r
+     JOIN students s ON s.id = r.student_id
+     WHERE r.record_date >= date('now', '-' || ? || ' days')
+     GROUP BY r.student_id
+     HAVING count >= ?`,
+    [thresholdDays, thresholdCount]
+  );
 }
 
 // ---------- 유형 / 템플릿 ----------
 export function getConsultTypes() {
-  return db.prepare('SELECT * FROM consult_types ORDER BY id').all();
+  return all('SELECT * FROM consult_types ORDER BY id');
 }
 
 export function getQuickTemplates(typeId: number) {
-  return db.prepare('SELECT * FROM quick_templates WHERE type_id = ? ORDER BY id').all(typeId);
+  return all('SELECT * FROM quick_templates WHERE type_id = ? ORDER BY id', [typeId]);
 }
 
 // ---------- 설정 ----------
 export function getSetting(key: string): string | null {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
+  const row = get<{ value: string }>('SELECT value FROM settings WHERE key = ?', [key]);
   return row ? row.value : null;
 }
 
 export function setSetting(key: string, value: string) {
-  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(
+  run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [
     key,
     value
-  );
+  ]);
   return { ok: true };
 }

@@ -74,8 +74,8 @@ function checkReminders() {
   }
 }
 
-app.whenReady().then(() => {
-  db.initDatabase();
+app.whenReady().then(async () => {
+  await db.initDatabase();
   registerIpcHandlers();
   createWindow();
   checkReminders();
