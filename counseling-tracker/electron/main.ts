@@ -1,0 +1,91 @@
+import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
+import path from 'node:path';
+import * as db from './db/database';
+
+const isDev = !app.isPackaged;
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    minWidth: 960,
+    minHeight: 640,
+    backgroundColor: '#ffffff',
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  if (isDev && process.env.ELECTRON_RENDERER_URL) {
+    win.loadURL(process.env.ELECTRON_RENDERER_URL);
+  } else {
+    win.loadFile(path.join(__dirname, '../renderer/index.html'));
+  }
+
+  return win;
+}
+
+function registerIpcHandlers() {
+  // 학생
+  ipcMain.handle('students:import', async () => {
+    const result = await dialog.showOpenDialog({
+      title: '학생 명부 업로드',
+      filters: [{ name: 'Excel', extensions: ['xlsx', 'xls'] }],
+      properties: ['openFile']
+    });
+    if (result.canceled || result.filePaths.length === 0) return { imported: 0, canceled: true };
+    return db.importStudentsFromExcel(result.filePaths[0]);
+  });
+  ipcMain.handle('students:get', (_e, activeOnly = true) => db.getStudents(activeOnly));
+  ipcMain.handle('students:togglePin', (_e, studentId: number) => db.togglePin(studentId));
+  ipcMain.handle('students:archiveYear', (_e, yearLabel: string) => db.archiveCurrentYear(yearLabel));
+
+  // 상담 기록
+  ipcMain.handle('records:get', (_e, filter) => db.getRecords(filter));
+  ipcMain.handle('records:add', (_e, record) => db.addRecord(record));
+  ipcMain.handle('records:update', (_e, id: number, patch) => db.updateRecord(id, patch));
+  ipcMain.handle('records:delete', (_e, id: number) => db.deleteRecord(id));
+
+  // 통계 / 위기감지
+  ipcMain.handle('stats:monthly', () => db.getMonthlyStats());
+  ipcMain.handle('stats:crisisAlerts', () => db.getCrisisAlerts());
+  ipcMain.handle('stats:studentRanking', (_e, limit = 10) => db.getStudentRanking(limit));
+
+  // 유형 / 템플릿
+  ipcMain.handle('types:get', () => db.getConsultTypes());
+  ipcMain.handle('templates:get', (_e, typeId: number) => db.getQuickTemplates(typeId));
+
+  // 설정
+  ipcMain.handle('settings:get', (_e, key: string) => db.getSetting(key));
+  ipcMain.handle('settings:set', (_e, key: string, value: string) => db.setSetting(key, value));
+}
+
+function checkReminders() {
+  if (!Notification.isSupported()) return;
+  const alerts = db.getCrisisAlerts();
+  for (const a of alerts as { name: string; count: number }[]) {
+    new Notification({
+      title: '상담기록관리',
+      body: `${a.name} 학생 - 최근 상담 ${a.count}건, 확인이 필요합니다.`
+    }).show();
+  }
+}
+
+app.whenReady().then(() => {
+  db.initDatabase();
+  registerIpcHandlers();
+  createWindow();
+  checkReminders();
+  setInterval(checkReminders, 1000 * 60 * 60);
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});

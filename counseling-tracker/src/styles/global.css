@@ -1,0 +1,341 @@
+:root {
+  --bg: #ffffff;
+  --bg-sidebar: #f7f6f4;
+  --bg-hover: rgba(55, 53, 47, 0.06);
+  --bg-active: rgba(55, 53, 47, 0.09);
+  --bg-card: #ffffff;
+  --border: rgba(55, 53, 47, 0.11);
+  --text: #37352f;
+  --text-secondary: #787774;
+  --text-faint: #9b9a97;
+  --accent: #2383e2;
+  --accent-bg: rgba(35, 131, 226, 0.1);
+  --danger: #eb5757;
+  --danger-bg: rgba(235, 87, 87, 0.1);
+  --success: #2f9e44;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow-card: 0 1px 2px rgba(15, 15, 15, 0.06), 0 0 0 1px rgba(15, 15, 15, 0.03);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #191919;
+    --bg-sidebar: #202020;
+    --bg-hover: rgba(255, 255, 255, 0.055);
+    --bg-active: rgba(255, 255, 255, 0.09);
+    --bg-card: #202020;
+    --border: rgba(255, 255, 255, 0.094);
+    --text: #d4d4d4;
+    --text-secondary: #9b9b9b;
+    --text-faint: #6f6f6f;
+    --accent: #4da3ff;
+    --accent-bg: rgba(77, 163, 255, 0.14);
+    --danger: #ff6b6b;
+    --danger-bg: rgba(255, 107, 107, 0.14);
+    --success: #4fce5d;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Pretendard',
+    Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+}
+
+.app-shell {
+  display: flex;
+  height: 100vh;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 8px;
+  -webkit-app-region: drag;
+}
+
+.sidebar-title {
+  padding: 6px 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background 0.1s ease;
+}
+
+.sidebar-link:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.sidebar-link.active {
+  background: var(--bg-active);
+  color: var(--text);
+}
+
+.sidebar-icon {
+  font-size: 15px;
+  width: 18px;
+  text-align: center;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+  -webkit-app-region: no-drag;
+}
+
+/* ---------- Main content ---------- */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 40px 60px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.page-subtitle {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  margin: 0;
+}
+
+/* ---------- Cards / grids ---------- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+
+.metric-label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+/* ---------- Banner ---------- */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  cursor: pointer;
+  border: 1px solid var(--danger);
+  background: var(--danger-bg);
+  color: var(--text);
+}
+
+.banner-icon {
+  font-size: 15px;
+}
+
+/* ---------- Section ---------- */
+.section {
+  margin-bottom: 28px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--text);
+}
+
+/* ---------- Table ---------- */
+.record-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.record-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+}
+
+.record-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.record-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-faint);
+  text-align: center;
+  gap: 6px;
+}
+
+.empty-state-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+/* ---------- Buttons / inputs ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.btn:hover {
+  background: var(--bg-hover);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.input,
+.select,
+textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.input:focus,
+.select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+label.field-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.field {
+  margin-bottom: 16px;
+}
