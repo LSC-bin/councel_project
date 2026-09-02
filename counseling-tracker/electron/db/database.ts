@@ -284,11 +284,29 @@ export function getStudentSummary(id: number) {
       [id]
     )?.c ?? 0
   );
+  const niceUnreflectedCount = Number(
+    get<{ c: number }>(
+      'SELECT COUNT(*) as c FROM consult_records WHERE student_id = ? AND reflected_in_nice = 0',
+      [id]
+    )?.c ?? 0
+  );
   const lastRecord = get<{ record_date: string }>(
     'SELECT record_date FROM consult_records WHERE student_id = ? ORDER BY record_date DESC LIMIT 1',
     [id]
   );
-  return { totalCount, followUpPending, lastRecordDate: lastRecord?.record_date ?? null };
+  const nextAppointment = get<{ next_appointment: string }>(
+    `SELECT next_appointment FROM consult_records
+     WHERE student_id = ? AND next_appointment IS NOT NULL AND next_appointment >= date('now')
+     ORDER BY next_appointment ASC LIMIT 1`,
+    [id]
+  );
+  return {
+    totalCount,
+    followUpPending,
+    niceUnreflectedCount,
+    lastRecordDate: lastRecord?.record_date ?? null,
+    nextAppointment: nextAppointment?.next_appointment ?? null
+  };
 }
 
 // ---------- 상담 기록 ----------

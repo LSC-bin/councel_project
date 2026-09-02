@@ -43,7 +43,9 @@ interface StudentWithStats extends Student {
 interface StudentSummary {
   totalCount: number;
   followUpPending: number;
+  niceUnreflectedCount: number;
   lastRecordDate: string | null;
+  nextAppointment: string | null;
 }
 
 interface NewStudent {

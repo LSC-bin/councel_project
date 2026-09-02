@@ -11,6 +11,17 @@ function formatClassInfo(s: { grade: number | null; class_no: number | null; num
   return parts.length > 0 ? parts.join(' ') : '-';
 }
 
+function Avatar({ name, size = 22 }: { name: string; size?: number }) {
+  return (
+    <span
+      className="pinned-avatar"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.5), flexShrink: 0 }}
+    >
+      {name.slice(0, 1)}
+    </span>
+  );
+}
+
 export default function StudentsView() {
   const location = useLocation();
   const navState = location.state as { studentId?: number } | null;
@@ -95,8 +106,11 @@ export default function StudentsView() {
                   {filtered.map((s) => (
                     <tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedId(s.id)}>
                       <td>
-                        {!!s.pinned && <span style={{ color: 'var(--accent)', marginRight: 4 }}>★</span>}
-                        {s.name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <Avatar name={s.name} size={20} />
+                          {s.name}
+                          {!!s.pinned && <span style={{ color: 'var(--accent)' }}>★</span>}
+                        </div>
                       </td>
                       <td>{s.school_year ?? '-'}</td>
                       <td>{formatClassInfo(s)}</td>
@@ -293,26 +307,36 @@ function StudentDetailPanel({
   return (
     <div className="card" style={{ flex: '1 1 55%', position: 'sticky', top: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>
-            {student.name}
-            <button
-              className="btn"
-              style={{ marginLeft: 8, padding: '2px 8px', color: student.pinned ? 'var(--accent)' : undefined }}
-              onClick={handleTogglePin}
-              title="즐겨찾기"
-            >
-              {student.pinned ? '★ 고정됨' : '☆ 고정'}
-            </button>
-          </div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 2 }}>
-            {student.school_year ? `${student.school_year}학년도` : '학년도 미지정'} · {formatClassInfo(student)}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Avatar name={student.name} size={38} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>
+              {student.name}
+              <button
+                className="btn"
+                style={{ marginLeft: 8, padding: '2px 8px', color: student.pinned ? 'var(--accent)' : undefined }}
+                onClick={handleTogglePin}
+                title="즐겨찾기"
+              >
+                {student.pinned ? '★ 고정됨' : '☆ 고정'}
+              </button>
+            </div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 2 }}>
+              {student.school_year ? `${student.school_year}학년도` : '학년도 미지정'} · {formatClassInfo(student)}
+            </div>
           </div>
         </div>
         <button className="btn" onClick={onClose}>
           닫기
         </button>
       </div>
+
+      {summary?.nextAppointment && (
+        <div className="banner" style={{ borderColor: 'var(--accent)', background: 'var(--accent-bg)', cursor: 'default' }}>
+          <span className="banner-icon">📅</span>
+          <span>다음 상담 예정일: {summary.nextAppointment}</span>
+        </div>
+      )}
 
       {!editing ? (
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -356,10 +380,17 @@ function StudentDetailPanel({
       )}
 
       {summary && (
-        <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 16 }}>
+        <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: 16 }}>
           <MiniMetric label="총 상담 건수" value={summary.totalCount} />
           <MiniMetric label="후속조치 대기" value={summary.followUpPending} />
+          <MiniMetric label="생기부 미반영" value={summary.niceUnreflectedCount} />
           <MiniMetric label="최근 상담일" value={summary.lastRecordDate ?? '-'} />
+        </div>
+      )}
+
+      {records.some((r) => r.state_score != null) && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <ScoreTrend records={records} />
         </div>
       )}
 
@@ -378,6 +409,8 @@ function StudentDetailPanel({
                 <th>날짜</th>
                 <th>유형</th>
                 <th>내용</th>
+                <th>점수</th>
+                <th>후속조치</th>
               </tr>
             </thead>
             <tbody>
@@ -391,6 +424,10 @@ function StudentDetailPanel({
                     </span>
                   </td>
                   <td>{r.content?.slice(0, 30)}</td>
+                  <td>{r.state_score ?? '-'}</td>
+                  <td>
+                    <FollowUpStatus r={r} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -398,6 +435,50 @@ function StudentDetailPanel({
         </div>
       )}
     </div>
+  );
+}
+
+// 상태 점수(1~5) 추이를 보여주는 작은 SVG 스파크라인. 외부 차트 라이브러리 없이 가볍게 구현.
+function ScoreTrend({ records }: { records: ConsultRecord[] }) {
+  const points = records
+    .filter((r) => r.state_score != null)
+    .slice()
+    .sort((a, b) => a.record_date.localeCompare(b.record_date));
+
+  if (points.length === 0) return null;
+
+  const width = 100;
+  const height = 32;
+  const scoreToY = (score: number) => height - ((score - 1) / 4) * height;
+  const step = points.length > 1 ? width / (points.length - 1) : 0;
+  const coords = points.map((p, i) => [points.length > 1 ? i * step : width / 2, scoreToY(p.state_score as number)]);
+  const path = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const latest = points[points.length - 1].state_score;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+        <span className="field-label" style={{ marginBottom: 0 }}>
+          상태 점수 추이
+        </span>
+        <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>최근 {latest}점</span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
+        <path d={path} fill="none" stroke="var(--accent)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+        {coords.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r={2.2} fill="var(--accent)" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function FollowUpStatus({ r }: { r: ConsultRecord }) {
+  if (!r.follow_up_needed) return <span style={{ color: 'var(--text-faint)' }}>-</span>;
+  return (
+    <span style={{ color: r.follow_up_done ? 'var(--success)' : 'var(--danger)' }}>
+      {r.follow_up_done ? '완료' : '대기'}
+    </span>
   );
 }
 

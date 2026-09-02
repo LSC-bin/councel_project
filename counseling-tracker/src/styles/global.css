@@ -275,6 +275,7 @@ button {
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border);
   padding: 8px 10px;
+  white-space: nowrap;
 }
 
 .record-table td {
