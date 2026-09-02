@@ -74,7 +74,7 @@ export default function Dashboard() {
         <MetricCard label="생기부 미반영" value={loading ? '—' : stats?.niceUnreflectedCount ?? 0} />
       </div>
 
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
         <div className="section" style={{ flex: '2 1 420px', marginBottom: 12 }}>
           <h2 className="section-title">최근 기록</h2>
           <div className="card">
@@ -118,7 +118,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="section" style={{ marginBottom: 0 }}>
             <h2 className="section-title">다가오는 일정</h2>
             <div className="card">

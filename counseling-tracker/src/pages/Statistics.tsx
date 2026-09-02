@@ -60,7 +60,7 @@ export default function Statistics() {
         </div>
       ) : (
         <>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
             <div className="card" style={{ flex: '2 1 420px' }}>
               <h2 className="section-title">월별 기록 건수</h2>
               <Bar

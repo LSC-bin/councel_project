@@ -95,7 +95,7 @@ export default function RecordInput() {
         content,
         state_score: stateScore,
         follow_up_needed: followUpNeeded,
-        next_appointment: followUpNeeded ? nextAppointment || null : null,
+        next_appointment: nextAppointment || null,
         referred_to: referredTo.join(','),
         reflected_in_nice: reflectedInNice
       });
@@ -222,19 +222,18 @@ export default function RecordInput() {
         </div>
 
         <div className="field">
+          <label className="field-label">다음 상담 예약일 (선택)</label>
+          <input className="input" type="date" value={nextAppointment} onChange={(e) => setNextAppointment(e.target.value)} />
+          <p style={{ color: 'var(--text-faint)', fontSize: 12, marginTop: 4 }}>
+            입력하면 대시보드 "다가오는 일정"에 표시됩니다.
+          </p>
+        </div>
+
+        <div className="field">
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 500 }}>
             <input type="checkbox" checked={followUpNeeded} onChange={(e) => setFollowUpNeeded(e.target.checked)} />
             후속조치 필요
           </label>
-          {followUpNeeded && (
-            <input
-              className="input"
-              type="date"
-              style={{ marginTop: 8 }}
-              value={nextAppointment}
-              onChange={(e) => setNextAppointment(e.target.value)}
-            />
-          )}
         </div>
 
         <div className="field">

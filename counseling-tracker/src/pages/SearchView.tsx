@@ -71,7 +71,7 @@ export default function SearchView() {
         <p className="page-subtitle">학생·기간·유형으로 기록을 검색합니다.</p>
       </div>
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card" style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
           <div style={{ minWidth: 180 }}>
             <label className="field-label">학생명</label>
@@ -113,7 +113,7 @@ export default function SearchView() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         <div className="card" style={{ flex: selected ? '1 1 55%' : '1 1 100%', padding: 0, overflow: 'hidden' }}>
           {loading ? (
             <div className="empty-state">불러오는 중…</div>
@@ -210,7 +210,7 @@ function RecordDetailPanel({
         state_score: stateScore,
         follow_up_needed: followUpNeeded,
         follow_up_done: followUpDone,
-        next_appointment: followUpNeeded ? nextAppointment || null : null,
+        next_appointment: nextAppointment || null,
         referred_to: referredTo.join(','),
         reflected_in_nice: reflectedInNice
       });
@@ -253,12 +253,8 @@ function RecordDetailPanel({
           </div>
           <div className="field" style={{ fontSize: 12.5, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {record.state_score != null && <div>상태 점수: {record.state_score}</div>}
-            {!!record.follow_up_needed && (
-              <div>
-                후속조치: {record.follow_up_done ? '완료' : '대기'}
-                {record.next_appointment ? ` · 다음 일정 ${record.next_appointment}` : ''}
-              </div>
-            )}
+            {!!record.follow_up_needed && <div>후속조치: {record.follow_up_done ? '완료' : '대기'}</div>}
+            {record.next_appointment && <div>다음 상담 예약일: {record.next_appointment}</div>}
             {record.referred_to && <div>유관기관 연계: {record.referred_to.split(',').join(', ')}</div>}
             <div>생기부 반영: {record.reflected_in_nice ? '완료' : '미반영'}</div>
           </div>
@@ -304,24 +300,22 @@ function RecordDetailPanel({
             </div>
           </div>
           <div className="field">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 500 }}>
-              <input type="checkbox" checked={followUpNeeded} onChange={(e) => setFollowUpNeeded(e.target.checked)} />
-              후속조치 필요
-            </label>
-            {followUpNeeded && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-                <input
-                  className="input"
-                  type="date"
-                  value={nextAppointment}
-                  onChange={(e) => setNextAppointment(e.target.value)}
-                />
+            <label className="field-label">다음 상담 예약일 (선택)</label>
+            <input className="input" type="date" value={nextAppointment} onChange={(e) => setNextAppointment(e.target.value)} />
+          </div>
+          <div className="field">
+            <div style={{ display: 'flex', gap: 12 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 500 }}>
+                <input type="checkbox" checked={followUpNeeded} onChange={(e) => setFollowUpNeeded(e.target.checked)} />
+                후속조치 필요
+              </label>
+              {followUpNeeded && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, whiteSpace: 'nowrap' }}>
                   <input type="checkbox" checked={followUpDone} onChange={(e) => setFollowUpDone(e.target.checked)} />
                   완료됨
                 </label>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           <div className="field">
             <label className="field-label">유관기관 연계</label>

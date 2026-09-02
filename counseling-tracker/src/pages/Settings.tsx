@@ -138,7 +138,7 @@ function RecordTypeSettings() {
       <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: -6, marginBottom: 12 }}>
         상담뿐 아니라 출결·칭찬·학부모연락 등 학생과 관련된 어떤 기록이든 유형을 만들어 남길 수 있습니다.
       </p>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <div className="card" style={{ flex: '1 1 320px', padding: 0 }}>
           {types.length === 0 ? (
             <div className="empty-state">유형이 없습니다.</div>
@@ -248,15 +248,21 @@ function RecordTypeSettings() {
 
 function AppLockSettings() {
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  // 비밀번호가 이미 설정된 경우, 현재 비밀번호를 먼저 확인해야 변경/해제 폼이 열린다.
+  const [verified, setVerified] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   function refresh() {
-    window.api.hasPassword().then(setHasPassword);
+    window.api.hasPassword().then((v) => {
+      setHasPassword(v);
+      setVerified(!v);
+    });
   }
 
   useEffect(() => {
@@ -267,6 +273,21 @@ function AppLockSettings() {
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
+  }
+
+  async function handleVerifyCurrent() {
+    setError(null);
+    setChecking(true);
+    try {
+      const ok = await window.api.verifyPassword(currentPassword);
+      if (!ok) {
+        setError('현재 비밀번호가 올바르지 않습니다.');
+        return;
+      }
+      setVerified(true);
+    } finally {
+      setChecking(false);
+    }
   }
 
   async function handleSetPassword() {
@@ -319,55 +340,68 @@ function AppLockSettings() {
     <div className="section">
       <h2 className="section-title">앱 잠금</h2>
       <div className="card" style={{ maxWidth: 420 }}>
-        <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
-          {hasPassword
-            ? '앱 실행 시 비밀번호를 요구합니다. 아래에서 변경하거나 해제할 수 있습니다.'
-            : '비밀번호를 설정하면 다음 실행부터 앱 시작 시 잠금 화면이 표시됩니다.'}
-        </p>
-
-        {hasPassword && (
-          <div className="field">
-            <label className="field-label">현재 비밀번호</label>
-            <input
-              className="input"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-          </div>
-        )}
-        <div className="field">
-          <label className="field-label">{hasPassword ? '새 비밀번호' : '설정할 비밀번호'}</label>
-          <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-        </div>
-        <div className="field">
-          <label className="field-label">비밀번호 확인</label>
-          <input
-            className="input"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-        </div>
-
-        {error && <p style={{ color: 'var(--danger)', fontSize: 12.5, marginBottom: 10 }}>{error}</p>}
-        {message && <p style={{ color: 'var(--success)', fontSize: 12.5, marginBottom: 10 }}>{message}</p>}
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-primary" disabled={saving || !newPassword} onClick={handleSetPassword}>
-            {hasPassword ? '비밀번호 변경' : '잠금 설정'}
-          </button>
-          {hasPassword && (
-            <button
-              className="btn"
-              style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
-              disabled={saving || !currentPassword}
-              onClick={handleRemovePassword}
-            >
-              잠금 해제
+        {hasPassword && !verified ? (
+          <>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
+              변경하거나 해제하려면 먼저 현재 비밀번호를 확인하세요.
+            </p>
+            <div className="field">
+              <label className="field-label">현재 비밀번호</label>
+              <input
+                className="input"
+                type="password"
+                autoFocus
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleVerifyCurrent()}
+              />
+            </div>
+            {error && <p style={{ color: 'var(--danger)', fontSize: 12.5, marginBottom: 10 }}>{error}</p>}
+            <button className="btn btn-primary" disabled={checking || !currentPassword} onClick={handleVerifyCurrent}>
+              {checking ? '확인 중…' : '확인'}
             </button>
-          )}
-        </div>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
+              {hasPassword
+                ? '새 비밀번호를 입력해 변경하거나, 앱 잠금을 해제할 수 있습니다.'
+                : '비밀번호를 설정하면 다음 실행부터 앱 시작 시 잠금 화면이 표시됩니다.'}
+            </p>
+            <div className="field">
+              <label className="field-label">{hasPassword ? '새 비밀번호' : '설정할 비밀번호'}</label>
+              <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </div>
+            <div className="field">
+              <label className="field-label">비밀번호 확인</label>
+              <input
+                className="input"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+
+            {error && <p style={{ color: 'var(--danger)', fontSize: 12.5, marginBottom: 10 }}>{error}</p>}
+            {message && <p style={{ color: 'var(--success)', fontSize: 12.5, marginBottom: 10 }}>{message}</p>}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary" disabled={saving || !newPassword} onClick={handleSetPassword}>
+                {hasPassword ? '비밀번호 변경' : '잠금 설정'}
+              </button>
+              {hasPassword && (
+                <button
+                  className="btn"
+                  style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                  disabled={saving}
+                  onClick={handleRemovePassword}
+                >
+                  잠금 해제
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

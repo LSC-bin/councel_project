@@ -58,7 +58,7 @@ export default function StudentsView() {
         <p className="page-subtitle">학생 정보를 확인·수정하고, 학생별 전체 기록을 한눈에 봅니다.</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         <div style={{ flex: selected ? '1 1 40%' : '1 1 100%' }}>
           <div className="card" style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
             <input
@@ -434,7 +434,7 @@ function StudentDetailPanel({
       )}
 
       {!editing ? (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button className="btn btn-primary" onClick={() => navigate('/input', { state: { studentId: student.id, studentName: student.name } })}>
             기록 추가
           </button>
@@ -446,7 +446,7 @@ function StudentDetailPanel({
           </button>
         </div>
       ) : (
-        <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card" style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 140px' }}>
               <label className="field-label">이름</label>
@@ -475,39 +475,25 @@ function StudentDetailPanel({
         </div>
       )}
 
-      {!editing && (student.guardian_name || student.guardian_phone || student.student_phone || student.address || student.health_note || student.memo) && (
-        <div className="card" style={{ marginBottom: 16, fontSize: 13, display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {(student.guardian_name || student.guardian_phone) && (
-            <div>
-              <strong>보호자</strong> {student.guardian_name}
-              {student.guardian_phone ? ` · ${student.guardian_phone}` : ''}
-            </div>
-          )}
-          {student.student_phone && (
-            <div>
-              <strong>학생 연락처</strong> {student.student_phone}
-            </div>
-          )}
-          {student.address && (
-            <div>
-              <strong>주소</strong> {student.address}
-            </div>
-          )}
-          {student.health_note && (
-            <div style={{ color: 'var(--danger)' }}>
-              <strong>특이사항</strong> {student.health_note}
-            </div>
-          )}
-          {student.memo && (
-            <div style={{ color: 'var(--text-secondary)' }}>
-              <strong>메모</strong> {student.memo}
-            </div>
-          )}
+      {!editing && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div className="info-grid">
+            <InfoRow label="학년도" value={student.school_year} />
+            <InfoRow label="학년/반/번호" value={formatClassInfo(student) === '-' ? null : formatClassInfo(student)} />
+            <InfoRow
+              label="보호자"
+              value={[student.guardian_name, student.guardian_phone].filter(Boolean).join(' · ') || null}
+            />
+            <InfoRow label="학생 연락처" value={student.student_phone} />
+            <InfoRow label="주소" value={student.address} />
+            <InfoRow label="특이사항" value={student.health_note} tone="danger" />
+            <InfoRow label="메모" value={student.memo} />
+          </div>
         </div>
       )}
 
       {summary && (
-        <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: 16 }}>
+        <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: 12 }}>
           <MiniMetric label="총 기록 건수" value={summary.totalCount} />
           <MiniMetric label="후속조치 대기" value={summary.followUpPending} />
           <MiniMetric label="생기부 미반영" value={summary.niceUnreflectedCount} />
@@ -516,7 +502,7 @@ function StudentDetailPanel({
       )}
 
       {records.some((r) => r.state_score != null) && (
-        <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card" style={{ marginBottom: 12 }}>
           <ScoreTrend records={records} />
         </div>
       )}
@@ -606,6 +592,17 @@ function FollowUpStatus({ r }: { r: ConsultRecord }) {
     <span style={{ color: r.follow_up_done ? 'var(--success)' : 'var(--danger)' }}>
       {r.follow_up_done ? '완료' : '대기'}
     </span>
+  );
+}
+
+function InfoRow({ label, value, tone }: { label: string; value?: string | null; tone?: 'danger' }) {
+  return (
+    <div className="info-row">
+      <span className="info-row-label">{label}</span>
+      <span style={{ color: value ? (tone === 'danger' ? 'var(--danger)' : 'var(--text)') : 'var(--text-faint)' }}>
+        {value || '미입력'}
+      </span>
+    </div>
   );
 }
 
