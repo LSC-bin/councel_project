@@ -62,6 +62,8 @@ function registerIpcHandlers() {
   ipcMain.handle('stats:monthly', () => db.getMonthlyStats());
   ipcMain.handle('stats:crisisAlerts', () => db.getCrisisAlerts());
   ipcMain.handle('stats:studentRanking', (_e, limit = 10) => db.getStudentRanking(limit));
+  ipcMain.handle('students:pinned', () => db.getPinnedStudents());
+  ipcMain.handle('stats:upcoming', (_e, limit = 5) => db.getUpcomingAppointments(limit));
   ipcMain.handle('report:exportAnonymized', async () => {
     const today = new Date().toISOString().slice(0, 10);
     const result = await dialog.showSaveDialog({

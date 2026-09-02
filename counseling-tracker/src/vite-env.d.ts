@@ -90,12 +90,22 @@ interface MonthlyStats {
   thisMonthCount: number;
   followUpPending: number;
   studentCount: number;
+  niceUnreflectedCount: number;
 }
 
 interface CrisisAlert {
   student_id: number;
   name: string;
   count: number;
+}
+
+interface UpcomingAppointment {
+  id: number;
+  next_appointment: string;
+  student_id: number;
+  student_name: string;
+  type_name: string | null;
+  type_color: string | null;
 }
 
 interface Window {
@@ -118,6 +128,8 @@ interface Window {
     getMonthlyStats: () => Promise<MonthlyStats>;
     getCrisisAlerts: () => Promise<CrisisAlert[]>;
     getStudentRanking: (limit?: number) => Promise<{ student_id: number; name: string; count: number }[]>;
+    getPinnedStudents: () => Promise<Student[]>;
+    getUpcomingAppointments: (limit?: number) => Promise<UpcomingAppointment[]>;
     exportAnonymizedReport: () => Promise<{ canceled: boolean; filePath?: string }>;
 
     getConsultTypes: () => Promise<ConsultType[]>;

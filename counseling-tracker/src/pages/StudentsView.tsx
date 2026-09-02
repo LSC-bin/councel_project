@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function formatClassInfo(s: { grade: number | null; class_no: number | null; number: number | null }) {
   if (s.grade == null && s.class_no == null && s.number == null) return '-';
@@ -12,10 +12,13 @@ function formatClassInfo(s: { grade: number | null; class_no: number | null; num
 }
 
 export default function StudentsView() {
+  const location = useLocation();
+  const navState = location.state as { studentId?: number } | null;
+
   const [students, setStudents] = useState<StudentWithStats[]>([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(navState?.studentId ?? null);
   const [adding, setAdding] = useState(false);
 
   function refresh() {

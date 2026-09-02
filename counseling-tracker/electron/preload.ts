@@ -23,6 +23,8 @@ const api = {
   getMonthlyStats: () => ipcRenderer.invoke('stats:monthly'),
   getCrisisAlerts: () => ipcRenderer.invoke('stats:crisisAlerts'),
   getStudentRanking: (limit = 10) => ipcRenderer.invoke('stats:studentRanking', limit),
+  getPinnedStudents: () => ipcRenderer.invoke('students:pinned'),
+  getUpcomingAppointments: (limit = 5) => ipcRenderer.invoke('stats:upcoming', limit),
   exportAnonymizedReport: () => ipcRenderer.invoke('report:exportAnonymized'),
 
   // 유형 / 템플릿

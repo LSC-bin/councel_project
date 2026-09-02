@@ -405,7 +405,28 @@ export function getMonthlyStats() {
 
   const studentCount = Number(get<{ c: number }>('SELECT COUNT(*) as c FROM students WHERE active = 1')?.c ?? 0);
 
-  return { monthly, byType, thisMonthCount, followUpPending, studentCount };
+  const niceUnreflectedCount = Number(
+    get<{ c: number }>('SELECT COUNT(*) as c FROM consult_records WHERE reflected_in_nice = 0')?.c ?? 0
+  );
+
+  return { monthly, byType, thisMonthCount, followUpPending, studentCount, niceUnreflectedCount };
+}
+
+export function getPinnedStudents() {
+  return all('SELECT * FROM students WHERE pinned = 1 AND active = 1 ORDER BY name');
+}
+
+export function getUpcomingAppointments(limit = 5) {
+  return all(
+    `SELECT r.id, r.next_appointment, r.student_id, s.name as student_name, t.name as type_name, t.color as type_color
+     FROM consult_records r
+     JOIN students s ON s.id = r.student_id
+     LEFT JOIN consult_types t ON t.id = r.type_id
+     WHERE r.next_appointment IS NOT NULL AND r.next_appointment >= date('now')
+     ORDER BY r.next_appointment ASC
+     LIMIT ?`,
+    [limit]
+  );
 }
 
 export function getStudentRanking(limit = 10) {
