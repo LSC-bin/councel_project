@@ -143,7 +143,14 @@ export default function RecordInput() {
                     setStudentQuery('');
                   }}
                 >
-                  {s.name} {s.student_no ? <span style={{ color: 'var(--text-faint)' }}>· {s.student_no}</span> : null}
+                  {s.name}{' '}
+                  {(s.grade != null || s.class_no != null || s.number != null) && (
+                    <span style={{ color: 'var(--text-faint)' }}>
+                      · {[s.grade != null ? `${s.grade}학년` : null, s.class_no != null ? `${s.class_no}반` : null, s.number != null ? `${s.number}번` : null]
+                        .filter(Boolean)
+                        .join(' ')}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

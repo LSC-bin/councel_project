@@ -37,7 +37,7 @@ export default function Settings() {
         <h2 className="section-title">학생 명부</h2>
         <div className="card">
           <p style={{ color: 'var(--text-secondary)', marginTop: 0 }}>
-            엑셀 파일(번호 · 이름 · 학번)을 업로드해 학생 명부를 등록하세요.
+            엑셀 파일(학년도 · 학년 · 반 · 번호 · 이름)을 업로드해 학생 명부를 등록하세요.
           </p>
           <button className="btn btn-primary" disabled={importing} onClick={handleImport}>
             {importing ? '가져오는 중…' : '명부 업로드'}

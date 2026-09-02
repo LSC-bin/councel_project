@@ -47,8 +47,10 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS students (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    student_no TEXT,
-    class_name TEXT,
+    school_year TEXT,
+    grade INTEGER,
+    class_no INTEGER,
+    number INTEGER,
     pinned BOOLEAN DEFAULT 0,
     active BOOLEAN DEFAULT 1,
     archived_year TEXT
@@ -110,9 +112,22 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
   }
 
   db.exec(SCHEMA);
+  migrateSchema();
   seedDefaults();
   persist();
   return db;
+}
+
+// 이전 버전에서 만들어진 DB에 새 컬럼을 안전하게 추가한다(이미 있으면 건너뜀).
+function migrateSchema() {
+  const columns = all<{ name: string }>('PRAGMA table_info(students)').map((c) => c.name);
+  const addColumn = (name: string, type: string) => {
+    if (!columns.includes(name)) db.run(`ALTER TABLE students ADD COLUMN ${name} ${type}`);
+  };
+  addColumn('school_year', 'TEXT');
+  addColumn('grade', 'INTEGER');
+  addColumn('class_no', 'INTEGER');
+  addColumn('number', 'INTEGER');
 }
 
 function persist() {
@@ -165,14 +180,28 @@ function seedDefaults() {
 export function importStudentsFromExcel(filePath: string) {
   const workbook = XLSX.readFile(filePath);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<{ 이름?: string; 학번?: string | number; 번호?: string | number }>(sheet);
+  const rows = XLSX.utils.sheet_to_json<{
+    학년도?: string | number;
+    학년?: string | number;
+    반?: string | number;
+    번호?: string | number;
+    이름?: string;
+  }>(sheet);
+
+  const toInt = (v: string | number | undefined) => (v != null && v !== '' ? Number(v) : null);
 
   let count = 0;
   for (const row of rows) {
     const name = row['이름'];
     if (!name) continue;
-    const studentNo = row['학번'] != null ? String(row['학번']) : null;
-    db.run('INSERT INTO students (name, student_no, active) VALUES (?, ?, 1)', [name, studentNo]);
+    const schoolYear = row['학년도'] != null && row['학년도'] !== '' ? String(row['학년도']) : null;
+    db.run('INSERT INTO students (name, school_year, grade, class_no, number, active) VALUES (?, ?, ?, ?, ?, 1)', [
+      name,
+      schoolYear,
+      toInt(row['학년']),
+      toInt(row['반']),
+      toInt(row['번호'])
+    ]);
     count++;
   }
   persist();
@@ -180,9 +209,8 @@ export function importStudentsFromExcel(filePath: string) {
 }
 
 export function getStudents(activeOnly = true) {
-  return activeOnly
-    ? all('SELECT * FROM students WHERE active = 1 ORDER BY name')
-    : all('SELECT * FROM students ORDER BY name');
+  const order = 'ORDER BY school_year DESC, grade, class_no, number, name';
+  return activeOnly ? all(`SELECT * FROM students WHERE active = 1 ${order}`) : all(`SELECT * FROM students ${order}`);
 }
 
 export function togglePin(studentId: number) {
@@ -197,15 +225,19 @@ export function archiveCurrentYear(yearLabel: string) {
 
 export interface NewStudent {
   name: string;
-  student_no?: string | null;
-  class_name?: string | null;
+  school_year?: string | null;
+  grade?: number | null;
+  class_no?: number | null;
+  number?: number | null;
 }
 
 export function addStudent(input: NewStudent) {
-  db.run('INSERT INTO students (name, student_no, class_name, active) VALUES (?, ?, ?, 1)', [
+  db.run('INSERT INTO students (name, school_year, grade, class_no, number, active) VALUES (?, ?, ?, ?, ?, 1)', [
     input.name,
-    input.student_no ?? null,
-    input.class_name ?? null
+    input.school_year ?? null,
+    input.grade ?? null,
+    input.class_no ?? null,
+    input.number ?? null
   ]);
   const id = lastInsertId();
   persist();
@@ -238,7 +270,7 @@ export function getStudentsWithStats(activeOnly = true) {
      LEFT JOIN consult_records r ON r.student_id = s.id
      ${where}
      GROUP BY s.id
-     ORDER BY s.name`
+     ORDER BY s.school_year DESC, s.grade, s.class_no, s.number, s.name`
   );
 }
 

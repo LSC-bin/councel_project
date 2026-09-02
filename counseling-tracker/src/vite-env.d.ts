@@ -26,8 +26,10 @@ interface NewRecord {
 interface Student {
   id: number;
   name: string;
-  student_no: string | null;
-  class_name: string | null;
+  school_year: string | null;
+  grade: number | null;
+  class_no: number | null;
+  number: number | null;
   pinned: number;
   active: number;
   archived_year: string | null;
@@ -46,8 +48,10 @@ interface StudentSummary {
 
 interface NewStudent {
   name: string;
-  student_no?: string | null;
-  class_name?: string | null;
+  school_year?: string | null;
+  grade?: number | null;
+  class_no?: number | null;
+  number?: number | null;
 }
 
 interface ConsultType {

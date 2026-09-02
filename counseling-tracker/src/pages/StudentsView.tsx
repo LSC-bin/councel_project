@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+function formatClassInfo(s: { grade: number | null; class_no: number | null; number: number | null }) {
+  if (s.grade == null && s.class_no == null && s.number == null) return '-';
+  const parts = [
+    s.grade != null ? `${s.grade}학년` : null,
+    s.class_no != null ? `${s.class_no}반` : null,
+    s.number != null ? `${s.number}번` : null
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : '-';
+}
+
 export default function StudentsView() {
   const [students, setStudents] = useState<StudentWithStats[]>([]);
   const [query, setQuery] = useState('');
@@ -22,7 +32,7 @@ export default function StudentsView() {
 
   const filtered = useMemo(() => {
     if (!query) return students;
-    return students.filter((s) => s.name.includes(query) || (s.student_no ?? '').includes(query));
+    return students.filter((s) => s.name.includes(query) || String(s.number ?? '').includes(query));
   }, [students, query]);
 
   const selected = filtered.find((s) => s.id === selectedId) ?? students.find((s) => s.id === selectedId) ?? null;
@@ -39,7 +49,7 @@ export default function StudentsView() {
           <div className="card" style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
             <input
               className="input"
-              placeholder="이름 또는 학번 검색"
+              placeholder="이름 또는 번호 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -72,8 +82,8 @@ export default function StudentsView() {
                 <thead>
                   <tr>
                     <th>이름</th>
-                    <th>학번</th>
-                    <th>반</th>
+                    <th>학년도</th>
+                    <th>학년/반/번호</th>
                     <th>상담 건수</th>
                     <th>최근 상담</th>
                   </tr>
@@ -85,8 +95,8 @@ export default function StudentsView() {
                         {!!s.pinned && <span style={{ color: 'var(--accent)', marginRight: 4 }}>★</span>}
                         {s.name}
                       </td>
-                      <td>{s.student_no ?? '-'}</td>
-                      <td>{s.class_name ?? '-'}</td>
+                      <td>{s.school_year ?? '-'}</td>
+                      <td>{formatClassInfo(s)}</td>
                       <td>{s.record_count}</td>
                       <td>{s.last_record_date ?? '-'}</td>
                     </tr>
@@ -114,10 +124,53 @@ export default function StudentsView() {
   );
 }
 
+function StudentFormFields({
+  schoolYear,
+  setSchoolYear,
+  grade,
+  setGrade,
+  classNo,
+  setClassNo,
+  number,
+  setNumber
+}: {
+  schoolYear: string;
+  setSchoolYear: (v: string) => void;
+  grade: string;
+  setGrade: (v: string) => void;
+  classNo: string;
+  setClassNo: (v: string) => void;
+  number: string;
+  setNumber: (v: string) => void;
+}) {
+  return (
+    <>
+      <div style={{ flex: '1 1 90px' }}>
+        <label className="field-label">학년도</label>
+        <input className="input" placeholder="2026" value={schoolYear} onChange={(e) => setSchoolYear(e.target.value)} />
+      </div>
+      <div style={{ flex: '1 1 70px' }}>
+        <label className="field-label">학년</label>
+        <input className="input" type="number" min={1} value={grade} onChange={(e) => setGrade(e.target.value)} />
+      </div>
+      <div style={{ flex: '1 1 70px' }}>
+        <label className="field-label">반</label>
+        <input className="input" type="number" min={1} value={classNo} onChange={(e) => setClassNo(e.target.value)} />
+      </div>
+      <div style={{ flex: '1 1 70px' }}>
+        <label className="field-label">번호</label>
+        <input className="input" type="number" min={1} value={number} onChange={(e) => setNumber(e.target.value)} />
+      </div>
+    </>
+  );
+}
+
 function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: (s: Student) => void }) {
   const [name, setName] = useState('');
-  const [studentNo, setStudentNo] = useState('');
-  const [className, setClassName] = useState('');
+  const [schoolYear, setSchoolYear] = useState('');
+  const [grade, setGrade] = useState('');
+  const [classNo, setClassNo] = useState('');
+  const [number, setNumber] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function handleAdd() {
@@ -126,8 +179,10 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
     try {
       const student = await window.api.addStudent({
         name: name.trim(),
-        student_no: studentNo || null,
-        class_name: className || null
+        school_year: schoolYear || null,
+        grade: grade ? Number(grade) : null,
+        class_no: classNo ? Number(classNo) : null,
+        number: number ? Number(number) : null
       });
       onAdded(student);
     } finally {
@@ -142,14 +197,16 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
           <label className="field-label">이름 *</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </div>
-        <div style={{ flex: '1 1 100px' }}>
-          <label className="field-label">학번</label>
-          <input className="input" value={studentNo} onChange={(e) => setStudentNo(e.target.value)} />
-        </div>
-        <div style={{ flex: '1 1 100px' }}>
-          <label className="field-label">반</label>
-          <input className="input" value={className} onChange={(e) => setClassName(e.target.value)} />
-        </div>
+        <StudentFormFields
+          schoolYear={schoolYear}
+          setSchoolYear={setSchoolYear}
+          grade={grade}
+          setGrade={setGrade}
+          classNo={classNo}
+          setClassNo={setClassNo}
+          number={number}
+          setNumber={setNumber}
+        />
         <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleAdd}>
           추가
         </button>
@@ -175,8 +232,10 @@ function StudentDetailPanel({
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(student.name);
-  const [studentNo, setStudentNo] = useState(student.student_no ?? '');
-  const [className, setClassName] = useState(student.class_name ?? '');
+  const [schoolYear, setSchoolYear] = useState(student.school_year ?? '');
+  const [grade, setGrade] = useState(student.grade != null ? String(student.grade) : '');
+  const [classNo, setClassNo] = useState(student.class_no != null ? String(student.class_no) : '');
+  const [number, setNumber] = useState(student.number != null ? String(student.number) : '');
   const [saving, setSaving] = useState(false);
 
   const [summary, setSummary] = useState<StudentSummary | null>(null);
@@ -185,8 +244,10 @@ function StudentDetailPanel({
 
   useEffect(() => {
     setName(student.name);
-    setStudentNo(student.student_no ?? '');
-    setClassName(student.class_name ?? '');
+    setSchoolYear(student.school_year ?? '');
+    setGrade(student.grade != null ? String(student.grade) : '');
+    setClassNo(student.class_no != null ? String(student.class_no) : '');
+    setNumber(student.number != null ? String(student.number) : '');
     setEditing(false);
     setLoadingHistory(true);
     Promise.all([window.api.getStudentSummary(student.id), window.api.getRecords({ studentId: student.id, order: 'desc' })])
@@ -208,8 +269,10 @@ function StudentDetailPanel({
     try {
       await window.api.updateStudent(student.id, {
         name: name.trim(),
-        student_no: studentNo || null,
-        class_name: className || null
+        school_year: schoolYear || null,
+        grade: grade ? Number(grade) : null,
+        class_no: classNo ? Number(classNo) : null,
+        number: number ? Number(number) : null
       });
       setEditing(false);
       onChanged();
@@ -240,7 +303,7 @@ function StudentDetailPanel({
             </button>
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 2 }}>
-            {student.student_no ?? '학번 없음'} · {student.class_name ?? '반 미지정'}
+            {student.school_year ? `${student.school_year}학년도` : '학년도 미지정'} · {formatClassInfo(student)}
           </div>
         </div>
         <button className="btn" onClick={onClose}>
@@ -267,14 +330,16 @@ function StudentDetailPanel({
               <label className="field-label">이름</label>
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <div style={{ flex: '1 1 100px' }}>
-              <label className="field-label">학번</label>
-              <input className="input" value={studentNo} onChange={(e) => setStudentNo(e.target.value)} />
-            </div>
-            <div style={{ flex: '1 1 100px' }}>
-              <label className="field-label">반</label>
-              <input className="input" value={className} onChange={(e) => setClassName(e.target.value)} />
-            </div>
+            <StudentFormFields
+              schoolYear={schoolYear}
+              setSchoolYear={setSchoolYear}
+              grade={grade}
+              setGrade={setGrade}
+              classNo={classNo}
+              setClassNo={setClassNo}
+              number={number}
+              setNumber={setNumber}
+            />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleSave}>

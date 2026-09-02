@@ -1,8 +1,10 @@
 CREATE TABLE IF NOT EXISTS students (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    student_no TEXT,
-    class_name TEXT,
+    school_year TEXT,           -- 학년도 (예: '2026')
+    grade INTEGER,               -- 학년
+    class_no INTEGER,            -- 반
+    number INTEGER,              -- 번호
     pinned BOOLEAN DEFAULT 0,
     active BOOLEAN DEFAULT 1,
     archived_year TEXT
