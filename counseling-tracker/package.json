@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "tsc --noEmit && electron-vite build",
-    "build:win": "npm run build && electron-builder --win"
+    "build:win": "npm run build && electron-builder --win",
+    "seed:demo": "electron scripts/seed-demo.js"
   },
   "dependencies": {
     "chart.js": "^4.4.4",
