@@ -55,7 +55,7 @@ export default function StudentsView() {
     <div>
       <div className="page-header">
         <h1 className="page-title">학생 관리</h1>
-        <p className="page-subtitle">학생 정보를 확인·수정하고, 학생별 상담 이력을 한눈에 봅니다.</p>
+        <p className="page-subtitle">학생 정보를 확인·수정하고, 학생별 전체 기록을 한눈에 봅니다.</p>
       </div>
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
@@ -98,8 +98,8 @@ export default function StudentsView() {
                     <th>이름</th>
                     <th>학년도</th>
                     <th>학년/반/번호</th>
-                    <th>상담 건수</th>
-                    <th>최근 상담</th>
+                    <th>기록 건수</th>
+                    <th>최근 기록</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,12 +182,85 @@ function StudentFormFields({
   );
 }
 
+interface ProfileFieldState {
+  guardianName: string;
+  setGuardianName: (v: string) => void;
+  guardianPhone: string;
+  setGuardianPhone: (v: string) => void;
+  studentPhone: string;
+  setStudentPhone: (v: string) => void;
+  address: string;
+  setAddress: (v: string) => void;
+  healthNote: string;
+  setHealthNote: (v: string) => void;
+  memo: string;
+  setMemo: (v: string) => void;
+}
+
+function ProfileFields(p: ProfileFieldState) {
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+        <div style={{ flex: '1 1 140px' }}>
+          <label className="field-label">보호자</label>
+          <input className="input" value={p.guardianName} onChange={(e) => p.setGuardianName(e.target.value)} />
+        </div>
+        <div style={{ flex: '1 1 140px' }}>
+          <label className="field-label">보호자 연락처</label>
+          <input className="input" value={p.guardianPhone} onChange={(e) => p.setGuardianPhone(e.target.value)} placeholder="010-0000-0000" />
+        </div>
+        <div style={{ flex: '1 1 140px' }}>
+          <label className="field-label">학생 연락처</label>
+          <input className="input" value={p.studentPhone} onChange={(e) => p.setStudentPhone(e.target.value)} placeholder="010-0000-0000" />
+        </div>
+      </div>
+      <div className="field" style={{ marginTop: 10, marginBottom: 0 }}>
+        <label className="field-label">주소</label>
+        <input className="input" value={p.address} onChange={(e) => p.setAddress(e.target.value)} />
+      </div>
+      <div className="field" style={{ marginTop: 10, marginBottom: 0 }}>
+        <label className="field-label">건강·알레르기 등 특이사항</label>
+        <input className="input" value={p.healthNote} onChange={(e) => p.setHealthNote(e.target.value)} />
+      </div>
+      <div className="field" style={{ marginTop: 10, marginBottom: 0 }}>
+        <label className="field-label">메모</label>
+        <textarea rows={2} value={p.memo} onChange={(e) => p.setMemo(e.target.value)} />
+      </div>
+    </>
+  );
+}
+
+function useProfileFieldState(student?: Partial<Student>): ProfileFieldState {
+  const [guardianName, setGuardianName] = useState(student?.guardian_name ?? '');
+  const [guardianPhone, setGuardianPhone] = useState(student?.guardian_phone ?? '');
+  const [studentPhone, setStudentPhone] = useState(student?.student_phone ?? '');
+  const [address, setAddress] = useState(student?.address ?? '');
+  const [healthNote, setHealthNote] = useState(student?.health_note ?? '');
+  const [memo, setMemo] = useState(student?.memo ?? '');
+  return {
+    guardianName,
+    setGuardianName,
+    guardianPhone,
+    setGuardianPhone,
+    studentPhone,
+    setStudentPhone,
+    address,
+    setAddress,
+    healthNote,
+    setHealthNote,
+    memo,
+    setMemo
+  };
+}
+
 function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: (s: Student) => void }) {
   const [name, setName] = useState('');
   const [schoolYear, setSchoolYear] = useState('');
   const [grade, setGrade] = useState('');
   const [classNo, setClassNo] = useState('');
   const [number, setNumber] = useState('');
+  const [showProfile, setShowProfile] = useState(false);
+  const profile = useProfileFieldState();
   const [saving, setSaving] = useState(false);
 
   async function handleAdd() {
@@ -199,7 +272,13 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
         school_year: schoolYear || null,
         grade: grade ? Number(grade) : null,
         class_no: classNo ? Number(classNo) : null,
-        number: number ? Number(number) : null
+        number: number ? Number(number) : null,
+        guardian_name: profile.guardianName || null,
+        guardian_phone: profile.guardianPhone || null,
+        student_phone: profile.studentPhone || null,
+        address: profile.address || null,
+        health_note: profile.healthNote || null,
+        memo: profile.memo || null
       });
       onAdded(student);
     } finally {
@@ -231,6 +310,15 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
           취소
         </button>
       </div>
+      <button
+        type="button"
+        className="btn"
+        style={{ marginTop: 10, padding: '3px 8px', fontSize: 12.5 }}
+        onClick={() => setShowProfile((v) => !v)}
+      >
+        {showProfile ? '▾ 보호자·연락처 정보 접기' : '▸ 보호자·연락처 정보 입력 (선택)'}
+      </button>
+      {showProfile && <ProfileFields {...profile} />}
     </div>
   );
 }
@@ -253,6 +341,7 @@ function StudentDetailPanel({
   const [grade, setGrade] = useState(student.grade != null ? String(student.grade) : '');
   const [classNo, setClassNo] = useState(student.class_no != null ? String(student.class_no) : '');
   const [number, setNumber] = useState(student.number != null ? String(student.number) : '');
+  const profile = useProfileFieldState(student);
   const [saving, setSaving] = useState(false);
 
   const [summary, setSummary] = useState<StudentSummary | null>(null);
@@ -289,7 +378,13 @@ function StudentDetailPanel({
         school_year: schoolYear || null,
         grade: grade ? Number(grade) : null,
         class_no: classNo ? Number(classNo) : null,
-        number: number ? Number(number) : null
+        number: number ? Number(number) : null,
+        guardian_name: profile.guardianName || null,
+        guardian_phone: profile.guardianPhone || null,
+        student_phone: profile.studentPhone || null,
+        address: profile.address || null,
+        health_note: profile.healthNote || null,
+        memo: profile.memo || null
       });
       setEditing(false);
       onChanged();
@@ -299,7 +394,7 @@ function StudentDetailPanel({
   }
 
   async function handleDelete() {
-    if (!confirm(`${student.name} 학생을 삭제할까요? 이 학생의 상담 기록도 모두 함께 삭제되며 되돌릴 수 없습니다.`)) return;
+    if (!confirm(`${student.name} 학생을 삭제할까요? 이 학생의 기록도 모두 함께 삭제되며 되돌릴 수 없습니다.`)) return;
     await window.api.deleteStudent(student.id);
     onDeleted();
   }
@@ -341,7 +436,7 @@ function StudentDetailPanel({
       {!editing ? (
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           <button className="btn btn-primary" onClick={() => navigate('/input', { state: { studentId: student.id, studentName: student.name } })}>
-            상담 기록 추가
+            기록 추가
           </button>
           <button className="btn" onClick={() => setEditing(true)}>
             정보 수정
@@ -368,6 +463,7 @@ function StudentDetailPanel({
               setNumber={setNumber}
             />
           </div>
+          <ProfileFields {...profile} />
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleSave}>
               저장
@@ -379,12 +475,43 @@ function StudentDetailPanel({
         </div>
       )}
 
+      {!editing && (student.guardian_name || student.guardian_phone || student.student_phone || student.address || student.health_note || student.memo) && (
+        <div className="card" style={{ marginBottom: 16, fontSize: 13, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {(student.guardian_name || student.guardian_phone) && (
+            <div>
+              <strong>보호자</strong> {student.guardian_name}
+              {student.guardian_phone ? ` · ${student.guardian_phone}` : ''}
+            </div>
+          )}
+          {student.student_phone && (
+            <div>
+              <strong>학생 연락처</strong> {student.student_phone}
+            </div>
+          )}
+          {student.address && (
+            <div>
+              <strong>주소</strong> {student.address}
+            </div>
+          )}
+          {student.health_note && (
+            <div style={{ color: 'var(--danger)' }}>
+              <strong>특이사항</strong> {student.health_note}
+            </div>
+          )}
+          {student.memo && (
+            <div style={{ color: 'var(--text-secondary)' }}>
+              <strong>메모</strong> {student.memo}
+            </div>
+          )}
+        </div>
+      )}
+
       {summary && (
         <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: 16 }}>
-          <MiniMetric label="총 상담 건수" value={summary.totalCount} />
+          <MiniMetric label="총 기록 건수" value={summary.totalCount} />
           <MiniMetric label="후속조치 대기" value={summary.followUpPending} />
           <MiniMetric label="생기부 미반영" value={summary.niceUnreflectedCount} />
-          <MiniMetric label="최근 상담일" value={summary.lastRecordDate ?? '-'} />
+          <MiniMetric label="최근 기록일" value={summary.lastRecordDate ?? '-'} />
         </div>
       )}
 
@@ -394,12 +521,12 @@ function StudentDetailPanel({
         </div>
       )}
 
-      <div className="section-title">상담 이력</div>
+      <div className="section-title">전체 기록</div>
       {loadingHistory ? (
         <div className="empty-state">불러오는 중…</div>
       ) : records.length === 0 ? (
         <div className="empty-state" style={{ padding: '24px 10px' }}>
-          아직 상담 기록이 없습니다.
+          아직 기록이 없습니다.
         </div>
       ) : (
         <div style={{ maxHeight: 360, overflowY: 'auto' }}>

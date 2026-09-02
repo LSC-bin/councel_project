@@ -34,6 +34,9 @@ const DEFAULT_TYPES: { name: string; color: string }[] = [
   { name: '가정환경', color: '#e0a13a' },
   { name: '정서·심리', color: '#e06a6a' },
   { name: '학교폭력', color: '#d94848' },
+  { name: '출결', color: '#2383e2' },
+  { name: '칭찬·상벌점', color: '#f2a90c' },
+  { name: '학부모 연락', color: '#5fb37a' },
   { name: '기타', color: '#8a8f98' }
 ];
 
@@ -51,6 +54,12 @@ CREATE TABLE IF NOT EXISTS students (
     grade INTEGER,
     class_no INTEGER,
     number INTEGER,
+    guardian_name TEXT,
+    guardian_phone TEXT,
+    student_phone TEXT,
+    address TEXT,
+    health_note TEXT,
+    memo TEXT,
     pinned BOOLEAN DEFAULT 0,
     active BOOLEAN DEFAULT 1,
     archived_year TEXT
@@ -128,6 +137,12 @@ function migrateSchema() {
   addColumn('grade', 'INTEGER');
   addColumn('class_no', 'INTEGER');
   addColumn('number', 'INTEGER');
+  addColumn('guardian_name', 'TEXT');
+  addColumn('guardian_phone', 'TEXT');
+  addColumn('student_phone', 'TEXT');
+  addColumn('address', 'TEXT');
+  addColumn('health_note', 'TEXT');
+  addColumn('memo', 'TEXT');
 }
 
 function persist() {
@@ -229,16 +244,33 @@ export interface NewStudent {
   grade?: number | null;
   class_no?: number | null;
   number?: number | null;
+  guardian_name?: string | null;
+  guardian_phone?: string | null;
+  student_phone?: string | null;
+  address?: string | null;
+  health_note?: string | null;
+  memo?: string | null;
 }
 
 export function addStudent(input: NewStudent) {
-  db.run('INSERT INTO students (name, school_year, grade, class_no, number, active) VALUES (?, ?, ?, ?, ?, 1)', [
-    input.name,
-    input.school_year ?? null,
-    input.grade ?? null,
-    input.class_no ?? null,
-    input.number ?? null
-  ]);
+  db.run(
+    `INSERT INTO students
+      (name, school_year, grade, class_no, number, guardian_name, guardian_phone, student_phone, address, health_note, memo, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+    [
+      input.name,
+      input.school_year ?? null,
+      input.grade ?? null,
+      input.class_no ?? null,
+      input.number ?? null,
+      input.guardian_name ?? null,
+      input.guardian_phone ?? null,
+      input.student_phone ?? null,
+      input.address ?? null,
+      input.health_note ?? null,
+      input.memo ?? null
+    ]
+  );
   const id = lastInsertId();
   persist();
   return get('SELECT * FROM students WHERE id = ?', [id]);
@@ -478,8 +510,49 @@ export function getConsultTypes() {
   return all('SELECT * FROM consult_types ORDER BY id');
 }
 
+export function addConsultType(input: { name: string; color: string }) {
+  db.run('INSERT INTO consult_types (name, color) VALUES (?, ?)', [input.name, input.color]);
+  const id = lastInsertId();
+  persist();
+  return get('SELECT * FROM consult_types WHERE id = ?', [id]);
+}
+
+export function updateConsultType(id: number, patch: { name?: string; color?: string }) {
+  const fields = Object.keys(patch) as (keyof typeof patch)[];
+  if (fields.length > 0) {
+    const setClause = fields.map((f) => `${f} = ?`).join(', ');
+    const values = fields.map((f) => patch[f]) as SqlValue[];
+    run(`UPDATE consult_types SET ${setClause} WHERE id = ?`, [...values, id]);
+  }
+  return get('SELECT * FROM consult_types WHERE id = ?', [id]);
+}
+
+// 사용 중인(상담 기록이 하나라도 있는) 유형은 삭제할 수 없다 — 기존 기록의 유형 정보가 유실되는 것을 방지.
+export function deleteConsultType(id: number): { ok: boolean; error?: string } {
+  const usage = Number(get<{ c: number }>('SELECT COUNT(*) as c FROM consult_records WHERE type_id = ?', [id])?.c ?? 0);
+  if (usage > 0) {
+    return { ok: false, error: `이 유형을 사용한 기록이 ${usage}건 있어 삭제할 수 없습니다.` };
+  }
+  db.run('DELETE FROM quick_templates WHERE type_id = ?', [id]);
+  db.run('DELETE FROM consult_types WHERE id = ?', [id]);
+  persist();
+  return { ok: true };
+}
+
 export function getQuickTemplates(typeId: number) {
   return all('SELECT * FROM quick_templates WHERE type_id = ? ORDER BY id', [typeId]);
+}
+
+export function addQuickTemplate(input: { type_id: number; text: string }) {
+  db.run('INSERT INTO quick_templates (type_id, text) VALUES (?, ?)', [input.type_id, input.text]);
+  const id = lastInsertId();
+  persist();
+  return get('SELECT * FROM quick_templates WHERE id = ?', [id]);
+}
+
+export function deleteQuickTemplate(id: number) {
+  run('DELETE FROM quick_templates WHERE id = ?', [id]);
+  return { ok: true };
 }
 
 // ---------- 설정 ----------

@@ -78,7 +78,12 @@ function registerIpcHandlers() {
 
   // 유형 / 템플릿
   ipcMain.handle('types:get', () => db.getConsultTypes());
+  ipcMain.handle('types:add', (_e, input) => db.addConsultType(input));
+  ipcMain.handle('types:update', (_e, id: number, patch) => db.updateConsultType(id, patch));
+  ipcMain.handle('types:delete', (_e, id: number) => db.deleteConsultType(id));
   ipcMain.handle('templates:get', (_e, typeId: number) => db.getQuickTemplates(typeId));
+  ipcMain.handle('templates:add', (_e, input) => db.addQuickTemplate(input));
+  ipcMain.handle('templates:delete', (_e, id: number) => db.deleteQuickTemplate(id));
 
   // 설정
   ipcMain.handle('settings:get', (_e, key: string) => db.getSetting(key));
@@ -121,7 +126,7 @@ function checkReminders() {
   for (const a of alerts as { name: string; count: number }[]) {
     new Notification({
       title: '상담기록관리',
-      body: `${a.name} 학생 - 최근 상담 ${a.count}건, 확인이 필요합니다.`
+      body: `${a.name} 학생 - 최근 14일간 기록 ${a.count}건, 확인이 필요합니다.`
     }).show();
   }
 }

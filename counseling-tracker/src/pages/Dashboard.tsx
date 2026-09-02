@@ -44,14 +44,14 @@ export default function Dashboard() {
     <div>
       <div className="page-header">
         <h1 className="page-title">대시보드</h1>
-        <p className="page-subtitle">오늘의 상담 현황을 한눈에 확인하세요.</p>
+        <p className="page-subtitle">오늘의 학생 현황을 한눈에 확인하세요.</p>
       </div>
 
       {alerts.length > 0 && (
         <div className="banner" onClick={() => navigate('/search', { state: { studentId: alerts[0].student_id } })}>
           <span className="banner-icon">⚠</span>
           <span>
-            {alerts.map((a) => a.name).join(', ')} 학생 — 최근 14일간 상담 급증. 클릭해서 확인하세요.
+            {alerts.map((a) => a.name).join(', ')} 학생 — 최근 14일간 기록 급증. 클릭해서 확인하세요.
           </span>
         </div>
       )}
@@ -68,7 +68,7 @@ export default function Dashboard() {
       )}
 
       <div className="metric-grid">
-        <MetricCard label="이번 달 상담 건수" value={loading ? '—' : stats?.thisMonthCount ?? 0} />
+        <MetricCard label="이번 달 기록 건수" value={loading ? '—' : stats?.thisMonthCount ?? 0} />
         <MetricCard label="후속조치 대기" value={loading ? '—' : stats?.followUpPending ?? 0} />
         <MetricCard label="등록 학생 수" value={loading ? '—' : stats?.studentCount ?? 0} />
         <MetricCard label="생기부 미반영" value={loading ? '—' : stats?.niceUnreflectedCount ?? 0} />
@@ -76,16 +76,16 @@ export default function Dashboard() {
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
         <div className="section" style={{ flex: '2 1 420px', marginBottom: 12 }}>
-          <h2 className="section-title">최근 상담 기록</h2>
+          <h2 className="section-title">최근 기록</h2>
           <div className="card">
             {loading ? (
               <div className="empty-state">불러오는 중…</div>
             ) : recent.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-state-icon">✎</div>
-                <div>아직 등록된 상담 기록이 없습니다.</div>
+                <div>아직 등록된 기록이 없습니다.</div>
                 <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={() => navigate('/input')}>
-                  첫 상담 기록 입력하기
+                  첫 기록 입력하기
                 </button>
               </div>
             ) : (
@@ -120,7 +120,7 @@ export default function Dashboard() {
 
         <div style={{ flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="section" style={{ marginBottom: 0 }}>
-            <h2 className="section-title">다가오는 상담</h2>
+            <h2 className="section-title">다가오는 일정</h2>
             <div className="card">
               {loading ? (
                 <div className="empty-state" style={{ padding: '20px 10px' }}>
@@ -128,7 +128,7 @@ export default function Dashboard() {
                 </div>
               ) : upcoming.length === 0 ? (
                 <div className="empty-state" style={{ padding: '20px 10px' }}>
-                  예정된 다음 상담이 없습니다.
+                  예정된 다음 일정이 없습니다.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

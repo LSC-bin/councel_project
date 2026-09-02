@@ -68,7 +68,7 @@ export default function SearchView() {
     <div>
       <div className="page-header">
         <h1 className="page-title">조회·검색</h1>
-        <p className="page-subtitle">학생·기간·유형으로 상담 기록을 검색합니다.</p>
+        <p className="page-subtitle">학생·기간·유형으로 기록을 검색합니다.</p>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -120,7 +120,7 @@ export default function SearchView() {
           ) : records.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon">⌕</div>
-              <div>조건에 맞는 상담 기록이 없습니다.</div>
+              <div>조건에 맞는 기록이 없습니다.</div>
             </div>
           ) : (
             <table className="record-table">
@@ -222,7 +222,7 @@ function RecordDetailPanel({
   }
 
   async function handleDelete() {
-    if (!confirm('이 상담 기록을 삭제할까요? 되돌릴 수 없습니다.')) return;
+    if (!confirm('이 기록을 삭제할까요? 되돌릴 수 없습니다.')) return;
     await window.api.deleteRecord(record.id);
     onChanged();
     onClose();
@@ -256,7 +256,7 @@ function RecordDetailPanel({
             {!!record.follow_up_needed && (
               <div>
                 후속조치: {record.follow_up_done ? '완료' : '대기'}
-                {record.next_appointment ? ` · 다음 상담 예정 ${record.next_appointment}` : ''}
+                {record.next_appointment ? ` · 다음 일정 ${record.next_appointment}` : ''}
               </div>
             )}
             {record.referred_to && <div>유관기관 연계: {record.referred_to.split(',').join(', ')}</div>}
@@ -274,7 +274,7 @@ function RecordDetailPanel({
       ) : (
         <>
           <div className="field">
-            <label className="field-label">상담 유형</label>
+            <label className="field-label">기록 유형</label>
             <select className="select" value={typeId} onChange={(e) => setTypeId(Number(e.target.value))}>
               {types.map((t) => (
                 <option key={t.id} value={t.id}>

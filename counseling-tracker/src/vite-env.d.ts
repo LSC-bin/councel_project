@@ -30,6 +30,12 @@ interface Student {
   grade: number | null;
   class_no: number | null;
   number: number | null;
+  guardian_name: string | null;
+  guardian_phone: string | null;
+  student_phone: string | null;
+  address: string | null;
+  health_note: string | null;
+  memo: string | null;
   pinned: number;
   active: number;
   archived_year: string | null;
@@ -54,6 +60,12 @@ interface NewStudent {
   grade?: number | null;
   class_no?: number | null;
   number?: number | null;
+  guardian_name?: string | null;
+  guardian_phone?: string | null;
+  student_phone?: string | null;
+  address?: string | null;
+  health_note?: string | null;
+  memo?: string | null;
 }
 
 interface ConsultType {
@@ -135,7 +147,12 @@ interface Window {
     exportAnonymizedReport: () => Promise<{ canceled: boolean; filePath?: string }>;
 
     getConsultTypes: () => Promise<ConsultType[]>;
+    addConsultType: (input: { name: string; color: string }) => Promise<ConsultType>;
+    updateConsultType: (id: number, patch: { name?: string; color?: string }) => Promise<ConsultType>;
+    deleteConsultType: (id: number) => Promise<{ ok: boolean; error?: string }>;
     getQuickTemplates: (typeId: number) => Promise<QuickTemplate[]>;
+    addQuickTemplate: (input: { type_id: number; text: string }) => Promise<QuickTemplate>;
+    deleteQuickTemplate: (id: number) => Promise<{ ok: boolean }>;
 
     getSetting: (key: string) => Promise<string | null>;
     setSetting: (key: string, value: string) => Promise<{ ok: boolean }>;

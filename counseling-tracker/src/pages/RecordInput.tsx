@@ -116,7 +116,7 @@ export default function RecordInput() {
     <div>
       <div className="page-header">
         <h1 className="page-title">기록 입력</h1>
-        <p className="page-subtitle">오늘의 상담 내용을 기록하세요.</p>
+        <p className="page-subtitle">오늘의 학생 기록을 남기세요.</p>
       </div>
 
       <div className="card" style={{ maxWidth: 640 }}>
@@ -168,7 +168,7 @@ export default function RecordInput() {
         </div>
 
         <div className="field">
-          <label className="field-label">상담 유형</label>
+          <label className="field-label">기록 유형</label>
           <select className="select" value={typeId ?? ''} onChange={(e) => setTypeId(Number(e.target.value))}>
             {types.map((t) => (
               <option key={t.id} value={t.id}>
@@ -198,13 +198,13 @@ export default function RecordInput() {
             rows={6}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="상담 내용을 입력하세요"
+            placeholder="기록 내용을 입력하세요"
           />
         </div>
 
         <div className="field">
           <label className="field-label">
-            상태 점수 (1~5){prevScore != null && <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}> · 직전 상담: {prevScore}</span>}
+            상태 점수 (1~5){prevScore != null && <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}> · 직전 기록: {prevScore}</span>}
           </label>
           <div style={{ display: 'flex', gap: 6 }}>
             {[1, 2, 3, 4, 5].map((n) => (

@@ -7,8 +7,7 @@ const api = {
   getStudentsWithStats: (activeOnly = true) => ipcRenderer.invoke('students:getWithStats', activeOnly),
   togglePin: (studentId: number) => ipcRenderer.invoke('students:togglePin', studentId),
   archiveCurrentYear: (yearLabel: string) => ipcRenderer.invoke('students:archiveYear', yearLabel),
-  addStudent: (input: { name: string; student_no?: string | null; class_name?: string | null }) =>
-    ipcRenderer.invoke('students:add', input),
+  addStudent: (input: unknown) => ipcRenderer.invoke('students:add', input),
   updateStudent: (id: number, patch: unknown) => ipcRenderer.invoke('students:update', id, patch),
   deleteStudent: (id: number) => ipcRenderer.invoke('students:delete', id),
   getStudentSummary: (id: number) => ipcRenderer.invoke('students:summary', id),
@@ -29,7 +28,12 @@ const api = {
 
   // 유형 / 템플릿
   getConsultTypes: () => ipcRenderer.invoke('types:get'),
+  addConsultType: (input: { name: string; color: string }) => ipcRenderer.invoke('types:add', input),
+  updateConsultType: (id: number, patch: { name?: string; color?: string }) => ipcRenderer.invoke('types:update', id, patch),
+  deleteConsultType: (id: number) => ipcRenderer.invoke('types:delete', id),
   getQuickTemplates: (typeId: number) => ipcRenderer.invoke('templates:get', typeId),
+  addQuickTemplate: (input: { type_id: number; text: string }) => ipcRenderer.invoke('templates:add', input),
+  deleteQuickTemplate: (id: number) => ipcRenderer.invoke('templates:delete', id),
 
   // 설정
   getSetting: (key: string) => ipcRenderer.invoke('settings:get', key),

@@ -48,7 +48,7 @@ export default function Statistics() {
     <div>
       <div className="page-header">
         <h1 className="page-title">통계</h1>
-        <p className="page-subtitle">월별·유형별 상담 추이를 확인합니다.</p>
+        <p className="page-subtitle">월별·유형별 기록 추이를 확인합니다.</p>
       </div>
 
       {loading ? (
@@ -56,19 +56,19 @@ export default function Statistics() {
       ) : isEmpty ? (
         <div className="card empty-state">
           <div className="empty-state-icon">▤</div>
-          <div>아직 통계를 낼 상담 기록이 없습니다.</div>
+          <div>아직 통계를 낼 기록이 없습니다.</div>
         </div>
       ) : (
         <>
           <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
             <div className="card" style={{ flex: '2 1 420px' }}>
-              <h2 className="section-title">월별 상담 건수</h2>
+              <h2 className="section-title">월별 기록 건수</h2>
               <Bar
                 data={{
                   labels: [...stats!.monthly].reverse().map((m) => m.month),
                   datasets: [
                     {
-                      label: '상담 건수',
+                      label: '기록 건수',
                       data: [...stats!.monthly].reverse().map((m) => m.count),
                       backgroundColor: '#2383e2'
                     }
@@ -106,7 +106,7 @@ export default function Statistics() {
           </div>
 
           <div className="section">
-            <h2 className="section-title">학생별 상담 횟수 랭킹 (상위 10명)</h2>
+            <h2 className="section-title">학생별 기록 횟수 랭킹 (상위 10명)</h2>
             <div className="card" style={{ padding: 0 }}>
               {ranking.length === 0 ? (
                 <div className="empty-state">데이터 없음</div>
@@ -116,7 +116,7 @@ export default function Statistics() {
                     <tr>
                       <th style={{ width: 60 }}>순위</th>
                       <th>학생</th>
-                      <th>상담 건수</th>
+                      <th>기록 건수</th>
                     </tr>
                   </thead>
                   <tbody>
