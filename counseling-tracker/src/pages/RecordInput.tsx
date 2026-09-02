@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const REFERRAL_OPTIONS = ['Wee클래스', '학폭담당', '보건교사', '학부모', '기타'];
 
@@ -7,12 +8,15 @@ function today() {
 }
 
 export default function RecordInput() {
+  const location = useLocation();
+  const navState = location.state as { studentId?: number; studentName?: string } | null;
+
   const [students, setStudents] = useState<Student[]>([]);
   const [types, setTypes] = useState<ConsultType[]>([]);
   const [templates, setTemplates] = useState<QuickTemplate[]>([]);
 
   const [studentQuery, setStudentQuery] = useState('');
-  const [studentId, setStudentId] = useState<number | null>(null);
+  const [studentId, setStudentId] = useState<number | null>(navState?.studentId ?? null);
   const [date, setDate] = useState(today());
   const [typeId, setTypeId] = useState<number | null>(null);
   const [content, setContent] = useState('');

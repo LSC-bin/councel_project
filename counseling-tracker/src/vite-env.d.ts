@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 interface RecordFilter {
+  studentId?: number;
   studentQuery?: string;
   startDate?: string;
   endDate?: string;
@@ -30,6 +31,23 @@ interface Student {
   pinned: number;
   active: number;
   archived_year: string | null;
+}
+
+interface StudentWithStats extends Student {
+  record_count: number;
+  last_record_date: string | null;
+}
+
+interface StudentSummary {
+  totalCount: number;
+  followUpPending: number;
+  lastRecordDate: string | null;
+}
+
+interface NewStudent {
+  name: string;
+  student_no?: string | null;
+  class_name?: string | null;
 }
 
 interface ConsultType {
@@ -80,8 +98,13 @@ interface Window {
   api: {
     importStudents: () => Promise<{ imported: number; canceled?: boolean }>;
     getStudents: (activeOnly?: boolean) => Promise<Student[]>;
+    getStudentsWithStats: (activeOnly?: boolean) => Promise<StudentWithStats[]>;
     togglePin: (studentId: number) => Promise<Student>;
     archiveCurrentYear: (yearLabel: string) => Promise<{ ok: boolean }>;
+    addStudent: (input: NewStudent) => Promise<Student>;
+    updateStudent: (id: number, patch: Partial<NewStudent>) => Promise<Student>;
+    deleteStudent: (id: number) => Promise<{ ok: boolean }>;
+    getStudentSummary: (id: number) => Promise<StudentSummary>;
 
     getRecords: (filter?: RecordFilter) => Promise<ConsultRecord[]>;
     addRecord: (record: NewRecord) => Promise<ConsultRecord>;

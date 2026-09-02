@@ -5,6 +5,7 @@ import path from 'node:path';
 import * as XLSX from 'xlsx';
 
 export interface RecordFilter {
+  studentId?: number;
   studentQuery?: string;
   startDate?: string;
   endDate?: string;
@@ -194,11 +195,79 @@ export function archiveCurrentYear(yearLabel: string) {
   return { ok: true };
 }
 
+export interface NewStudent {
+  name: string;
+  student_no?: string | null;
+  class_name?: string | null;
+}
+
+export function addStudent(input: NewStudent) {
+  db.run('INSERT INTO students (name, student_no, class_name, active) VALUES (?, ?, ?, 1)', [
+    input.name,
+    input.student_no ?? null,
+    input.class_name ?? null
+  ]);
+  const id = lastInsertId();
+  persist();
+  return get('SELECT * FROM students WHERE id = ?', [id]);
+}
+
+export function updateStudent(id: number, patch: Partial<NewStudent>) {
+  const fields = Object.keys(patch) as (keyof NewStudent)[];
+  if (fields.length > 0) {
+    const setClause = fields.map((f) => `${f} = ?`).join(', ');
+    const values = fields.map((f) => patch[f] ?? null) as SqlValue[];
+    run(`UPDATE students SET ${setClause} WHERE id = ?`, [...values, id]);
+  }
+  return get('SELECT * FROM students WHERE id = ?', [id]);
+}
+
+// 학생을 삭제하면 해당 학생의 상담 기록도 함께 삭제된다(되돌릴 수 없음, 렌더러에서 확인 후 호출).
+export function deleteStudent(id: number) {
+  db.run('DELETE FROM consult_records WHERE student_id = ?', [id]);
+  db.run('DELETE FROM students WHERE id = ?', [id]);
+  persist();
+  return { ok: true };
+}
+
+export function getStudentsWithStats(activeOnly = true) {
+  const where = activeOnly ? 'WHERE s.active = 1' : '';
+  return all(
+    `SELECT s.*, COUNT(r.id) as record_count, MAX(r.record_date) as last_record_date
+     FROM students s
+     LEFT JOIN consult_records r ON r.student_id = s.id
+     ${where}
+     GROUP BY s.id
+     ORDER BY s.name`
+  );
+}
+
+export function getStudentSummary(id: number) {
+  const totalCount = Number(
+    get<{ c: number }>('SELECT COUNT(*) as c FROM consult_records WHERE student_id = ?', [id])?.c ?? 0
+  );
+  const followUpPending = Number(
+    get<{ c: number }>(
+      'SELECT COUNT(*) as c FROM consult_records WHERE student_id = ? AND follow_up_needed = 1 AND follow_up_done = 0',
+      [id]
+    )?.c ?? 0
+  );
+  const lastRecord = get<{ record_date: string }>(
+    'SELECT record_date FROM consult_records WHERE student_id = ? ORDER BY record_date DESC LIMIT 1',
+    [id]
+  );
+  return { totalCount, followUpPending, lastRecordDate: lastRecord?.record_date ?? null };
+}
+
 // ---------- 상담 기록 ----------
 export function getRecords(filter: RecordFilter = {}) {
   const clauses: string[] = [];
   const params: SqlValue[] = [];
 
+  if (filter.studentId) {
+    clauses.push('r.student_id = ?');
+    params.push(filter.studentId);
+  }
   if (filter.studentQuery) {
     clauses.push('s.name LIKE ?');
     params.push(`%${filter.studentQuery}%`);

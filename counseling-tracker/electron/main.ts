@@ -44,8 +44,13 @@ function registerIpcHandlers() {
     return db.importStudentsFromExcel(result.filePaths[0]);
   });
   ipcMain.handle('students:get', (_e, activeOnly = true) => db.getStudents(activeOnly));
+  ipcMain.handle('students:getWithStats', (_e, activeOnly = true) => db.getStudentsWithStats(activeOnly));
   ipcMain.handle('students:togglePin', (_e, studentId: number) => db.togglePin(studentId));
   ipcMain.handle('students:archiveYear', (_e, yearLabel: string) => db.archiveCurrentYear(yearLabel));
+  ipcMain.handle('students:add', (_e, input) => db.addStudent(input));
+  ipcMain.handle('students:update', (_e, id: number, patch) => db.updateStudent(id, patch));
+  ipcMain.handle('students:delete', (_e, id: number) => db.deleteStudent(id));
+  ipcMain.handle('students:summary', (_e, id: number) => db.getStudentSummary(id));
 
   // 상담 기록
   ipcMain.handle('records:get', (_e, filter) => db.getRecords(filter));

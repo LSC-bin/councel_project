@@ -4,8 +4,14 @@ const api = {
   // 학생
   importStudents: () => ipcRenderer.invoke('students:import'),
   getStudents: (activeOnly = true) => ipcRenderer.invoke('students:get', activeOnly),
+  getStudentsWithStats: (activeOnly = true) => ipcRenderer.invoke('students:getWithStats', activeOnly),
   togglePin: (studentId: number) => ipcRenderer.invoke('students:togglePin', studentId),
   archiveCurrentYear: (yearLabel: string) => ipcRenderer.invoke('students:archiveYear', yearLabel),
+  addStudent: (input: { name: string; student_no?: string | null; class_name?: string | null }) =>
+    ipcRenderer.invoke('students:add', input),
+  updateStudent: (id: number, patch: unknown) => ipcRenderer.invoke('students:update', id, patch),
+  deleteStudent: (id: number) => ipcRenderer.invoke('students:delete', id),
+  getStudentSummary: (id: number) => ipcRenderer.invoke('students:summary', id),
 
   // 상담 기록
   getRecords: (filter?: unknown) => ipcRenderer.invoke('records:get', filter),

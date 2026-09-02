@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { to: '/', label: '대시보드', icon: '⌂', end: true },
   { to: '/input', label: '기록 입력', icon: '✎' },
   { to: '/search', label: '조회·검색', icon: '⌕' },
+  { to: '/students', label: '학생 관리', icon: '☺' },
   { to: '/statistics', label: '통계', icon: '▤' },
   { to: '/report', label: '보고서·백업', icon: '⇩' },
   { to: '/settings', label: '설정', icon: '⚙' }
