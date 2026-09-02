@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
 import path from 'node:path';
 import * as db from './db/database';
+import { buildAnonymizedReport } from './report';
 
 const isDev = !app.isPackaged;
 
@@ -53,6 +54,17 @@ function registerIpcHandlers() {
   ipcMain.handle('stats:monthly', () => db.getMonthlyStats());
   ipcMain.handle('stats:crisisAlerts', () => db.getCrisisAlerts());
   ipcMain.handle('stats:studentRanking', (_e, limit = 10) => db.getStudentRanking(limit));
+  ipcMain.handle('report:exportAnonymized', async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const result = await dialog.showSaveDialog({
+      title: '익명화 통계 내보내기',
+      defaultPath: `상담통계_익명화_${today}.xlsx`,
+      filters: [{ name: 'Excel', extensions: ['xlsx'] }]
+    });
+    if (result.canceled || !result.filePath) return { canceled: true };
+    await buildAnonymizedReport(result.filePath);
+    return { canceled: false, filePath: result.filePath };
+  });
 
   // 유형 / 템플릿
   ipcMain.handle('types:get', () => db.getConsultTypes());

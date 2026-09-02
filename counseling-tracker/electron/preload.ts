@@ -17,6 +17,7 @@ const api = {
   getMonthlyStats: () => ipcRenderer.invoke('stats:monthly'),
   getCrisisAlerts: () => ipcRenderer.invoke('stats:crisisAlerts'),
   getStudentRanking: (limit = 10) => ipcRenderer.invoke('stats:studentRanking', limit),
+  exportAnonymizedReport: () => ipcRenderer.invoke('report:exportAnonymized'),
 
   // 유형 / 템플릿
   getConsultTypes: () => ipcRenderer.invoke('types:get'),

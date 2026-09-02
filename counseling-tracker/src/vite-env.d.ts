@@ -91,6 +91,7 @@ interface Window {
     getMonthlyStats: () => Promise<MonthlyStats>;
     getCrisisAlerts: () => Promise<CrisisAlert[]>;
     getStudentRanking: (limit?: number) => Promise<{ student_id: number; name: string; count: number }[]>;
+    exportAnonymizedReport: () => Promise<{ canceled: boolean; filePath?: string }>;
 
     getConsultTypes: () => Promise<ConsultType[]>;
     getQuickTemplates: (typeId: number) => Promise<QuickTemplate[]>;
