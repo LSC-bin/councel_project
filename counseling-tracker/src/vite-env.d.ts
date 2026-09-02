@@ -16,6 +16,7 @@ interface NewRecord {
   content: string;
   state_score?: number | null;
   follow_up_needed?: boolean;
+  follow_up_done?: boolean;
   next_appointment?: string | null;
   referred_to?: string;
   reflected_in_nice?: boolean;
