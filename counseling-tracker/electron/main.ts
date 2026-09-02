@@ -2,6 +2,9 @@ import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
 import path from 'node:path';
 import * as db from './db/database';
 import { buildAnonymizedReport } from './report';
+import { hashPassword, verifyPassword } from './auth';
+
+const PASSWORD_SETTING_KEY = 'app_password_hash';
 
 const isDev = !app.isPackaged;
 
@@ -73,6 +76,36 @@ function registerIpcHandlers() {
   // 설정
   ipcMain.handle('settings:get', (_e, key: string) => db.getSetting(key));
   ipcMain.handle('settings:set', (_e, key: string, value: string) => db.setSetting(key, value));
+
+  // 앱 잠금
+  ipcMain.handle('auth:hasPassword', () => !!db.getSetting(PASSWORD_SETTING_KEY));
+  ipcMain.handle('auth:verify', (_e, password: string) => {
+    const stored = db.getSetting(PASSWORD_SETTING_KEY);
+    if (!stored) return true;
+    return verifyPassword(password, stored);
+  });
+  ipcMain.handle('auth:setPassword', (_e, { currentPassword, newPassword }: { currentPassword?: string; newPassword: string }) => {
+    const stored = db.getSetting(PASSWORD_SETTING_KEY);
+    if (stored) {
+      if (!currentPassword || !verifyPassword(currentPassword, stored)) {
+        return { ok: false, error: '현재 비밀번호가 올바르지 않습니다.' };
+      }
+    }
+    if (!newPassword || newPassword.length < 4) {
+      return { ok: false, error: '비밀번호는 4자 이상이어야 합니다.' };
+    }
+    db.setSetting(PASSWORD_SETTING_KEY, hashPassword(newPassword));
+    return { ok: true };
+  });
+  ipcMain.handle('auth:removePassword', (_e, currentPassword: string) => {
+    const stored = db.getSetting(PASSWORD_SETTING_KEY);
+    if (!stored) return { ok: true };
+    if (!verifyPassword(currentPassword, stored)) {
+      return { ok: false, error: '현재 비밀번호가 올바르지 않습니다.' };
+    }
+    db.setSetting(PASSWORD_SETTING_KEY, '');
+    return { ok: true };
+  });
 }
 
 function checkReminders() {

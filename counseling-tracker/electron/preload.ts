@@ -25,7 +25,13 @@ const api = {
 
   // 설정
   getSetting: (key: string) => ipcRenderer.invoke('settings:get', key),
-  setSetting: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value)
+  setSetting: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),
+
+  // 앱 잠금
+  hasPassword: () => ipcRenderer.invoke('auth:hasPassword'),
+  verifyPassword: (password: string) => ipcRenderer.invoke('auth:verify', password),
+  setPassword: (args: { currentPassword?: string; newPassword: string }) => ipcRenderer.invoke('auth:setPassword', args),
+  removePassword: (currentPassword: string) => ipcRenderer.invoke('auth:removePassword', currentPassword)
 };
 
 contextBridge.exposeInMainWorld('api', api);

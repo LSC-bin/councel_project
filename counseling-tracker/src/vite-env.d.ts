@@ -98,5 +98,10 @@ interface Window {
 
     getSetting: (key: string) => Promise<string | null>;
     setSetting: (key: string, value: string) => Promise<{ ok: boolean }>;
+
+    hasPassword: () => Promise<boolean>;
+    verifyPassword: (password: string) => Promise<boolean>;
+    setPassword: (args: { currentPassword?: string; newPassword: string }) => Promise<{ ok: boolean; error?: string }>;
+    removePassword: (currentPassword: string) => Promise<{ ok: boolean; error?: string }>;
   };
 }
