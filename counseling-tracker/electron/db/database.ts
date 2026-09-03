@@ -96,6 +96,17 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS appointments (
+    id INTEGER PRIMARY KEY,
+    student_id INTEGER REFERENCES students(id),
+    appt_date DATE NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    note TEXT,
+    record_id INTEGER REFERENCES consult_records(id),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 let db: SqlJsDatabase;
@@ -143,6 +154,20 @@ function migrateSchema() {
   addColumn('address', 'TEXT');
   addColumn('health_note', 'TEXT');
   addColumn('memo', 'TEXT');
+
+  // 예전 방식(기록에 딸린 next_appointment)으로 저장된 예약을 새 appointments 테이블로 1회성 이관.
+  // 이미 이관된 기록(record_id로 연결된 예약이 있는 경우)은 건너뛴다.
+  const legacy = all<{ id: number; student_id: number; next_appointment: string }>(
+    `SELECT id, student_id, next_appointment FROM consult_records WHERE next_appointment IS NOT NULL`
+  );
+  for (const r of legacy) {
+    const existing = get('SELECT id FROM appointments WHERE record_id = ?', [r.id]);
+    if (existing) continue;
+    db.run(
+      `INSERT INTO appointments (student_id, appt_date, start_time, end_time, note, record_id) VALUES (?, ?, '09:00', '09:30', ?, ?)`,
+      [r.student_id, r.next_appointment, '상담 예약(이관됨)', r.id]
+    );
+  }
 }
 
 function persist() {
@@ -330,10 +355,10 @@ export function getStudentSummary(id: number) {
     'SELECT record_date FROM consult_records WHERE student_id = ? ORDER BY record_date DESC LIMIT 1',
     [id]
   );
-  const nextAppointment = get<{ next_appointment: string }>(
-    `SELECT next_appointment FROM consult_records
-     WHERE student_id = ? AND next_appointment IS NOT NULL AND next_appointment >= date('now')
-     ORDER BY next_appointment ASC LIMIT 1`,
+  const nextAppointment = get<{ appt_date: string; start_time: string }>(
+    `SELECT appt_date, start_time FROM appointments
+     WHERE student_id = ? AND appt_date >= date('now')
+     ORDER BY appt_date ASC, start_time ASC LIMIT 1`,
     [id]
   );
   return {
@@ -341,7 +366,7 @@ export function getStudentSummary(id: number) {
     followUpPending,
     niceUnreflectedCount,
     lastRecordDate: lastRecord?.record_date ?? null,
-    nextAppointment: nextAppointment?.next_appointment ?? null
+    nextAppointment: nextAppointment ? `${nextAppointment.appt_date} ${nextAppointment.start_time}` : null
   };
 }
 
@@ -483,14 +508,116 @@ export function getPinnedStudents() {
 
 export function getUpcomingAppointments(limit = 5) {
   return all(
-    `SELECT r.id, r.next_appointment, r.student_id, s.name as student_name, t.name as type_name, t.color as type_color
-     FROM consult_records r
-     JOIN students s ON s.id = r.student_id
-     LEFT JOIN consult_types t ON t.id = r.type_id
-     WHERE r.next_appointment IS NOT NULL AND r.next_appointment >= date('now')
-     ORDER BY r.next_appointment ASC
+    `SELECT a.*, s.name as student_name
+     FROM appointments a
+     JOIN students s ON s.id = a.student_id
+     WHERE a.appt_date >= date('now')
+     ORDER BY a.appt_date ASC, a.start_time ASC
      LIMIT ?`,
     [limit]
+  );
+}
+
+// ---------- 예약(캘린더) ----------
+export interface NewAppointment {
+  student_id: number;
+  appt_date: string;
+  start_time: string;
+  end_time: string;
+  note?: string | null;
+  record_id?: number | null;
+}
+
+// 같은 날짜에 시간대가 겹치는 예약이 있는지 검사한다. excludeId는 자기 자신(수정 시) 제외용.
+export function checkAppointmentConflict(input: { appt_date: string; start_time: string; end_time: string; excludeId?: number }) {
+  const clauses = ['a.appt_date = ?', 'a.start_time < ?', 'a.end_time > ?'];
+  const params: SqlValue[] = [input.appt_date, input.end_time, input.start_time];
+  if (input.excludeId) {
+    clauses.push('a.id != ?');
+    params.push(input.excludeId);
+  }
+  return all(
+    `SELECT a.*, s.name as student_name
+     FROM appointments a
+     JOIN students s ON s.id = a.student_id
+     WHERE ${clauses.join(' AND ')}
+     ORDER BY a.start_time`,
+    params
+  );
+}
+
+export function addAppointment(input: NewAppointment) {
+  const conflicts = checkAppointmentConflict(input);
+  if (conflicts.length > 0) {
+    return { ok: false as const, conflicts };
+  }
+  db.run(
+    'INSERT INTO appointments (student_id, appt_date, start_time, end_time, note, record_id) VALUES (?, ?, ?, ?, ?, ?)',
+    [input.student_id, input.appt_date, input.start_time, input.end_time, input.note ?? null, input.record_id ?? null]
+  );
+  const id = lastInsertId();
+  persist();
+  const appointment = get('SELECT * FROM appointments WHERE id = ?', [id]);
+  return { ok: true as const, appointment };
+}
+
+export function updateAppointment(id: number, patch: Partial<NewAppointment>) {
+  const current = get<{ appt_date: string; start_time: string; end_time: string }>('SELECT * FROM appointments WHERE id = ?', [id]);
+  if (!current) return { ok: false as const, error: '예약을 찾을 수 없습니다.' };
+
+  const merged = {
+    appt_date: patch.appt_date ?? current.appt_date,
+    start_time: patch.start_time ?? current.start_time,
+    end_time: patch.end_time ?? current.end_time
+  };
+  const conflicts = checkAppointmentConflict({ ...merged, excludeId: id });
+  if (conflicts.length > 0) {
+    return { ok: false as const, conflicts };
+  }
+
+  const fields = Object.keys(patch) as (keyof NewAppointment)[];
+  if (fields.length > 0) {
+    const setClause = fields.map((f) => `${f} = ?`).join(', ');
+    const values = fields.map((f) => patch[f] ?? null) as SqlValue[];
+    run(`UPDATE appointments SET ${setClause} WHERE id = ?`, [...values, id]);
+  }
+  return { ok: true as const, appointment: get('SELECT * FROM appointments WHERE id = ?', [id]) };
+}
+
+export function deleteAppointment(id: number) {
+  run('DELETE FROM appointments WHERE id = ?', [id]);
+  return { ok: true };
+}
+
+export function getAppointmentsInRange(startDate: string, endDate: string) {
+  return all(
+    `SELECT a.*, s.name as student_name
+     FROM appointments a
+     JOIN students s ON s.id = a.student_id
+     WHERE a.appt_date >= ? AND a.appt_date <= ?
+     ORDER BY a.appt_date, a.start_time`,
+    [startDate, endDate]
+  );
+}
+
+export function getAppointmentsForDate(date: string) {
+  return all(
+    `SELECT a.*, s.name as student_name
+     FROM appointments a
+     JOIN students s ON s.id = a.student_id
+     WHERE a.appt_date = ?
+     ORDER BY a.start_time`,
+    [date]
+  );
+}
+
+export function getTodayAppointments() {
+  return all(
+    `SELECT a.*, s.name as student_name
+     FROM appointments a
+     JOIN students s ON s.id = a.student_id
+     WHERE a.appt_date = date('now')
+     ORDER BY a.start_time`
   );
 }
 

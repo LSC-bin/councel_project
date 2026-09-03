@@ -66,6 +66,14 @@ function registerIpcHandlers() {
   ipcMain.handle('stats:studentRanking', (_e, limit = 10) => db.getStudentRanking(limit));
   ipcMain.handle('students:pinned', () => db.getPinnedStudents());
   ipcMain.handle('stats:upcoming', (_e, limit = 5) => db.getUpcomingAppointments(limit));
+
+  // 예약(캘린더)
+  ipcMain.handle('appointments:inRange', (_e, startDate: string, endDate: string) => db.getAppointmentsInRange(startDate, endDate));
+  ipcMain.handle('appointments:forDate', (_e, date: string) => db.getAppointmentsForDate(date));
+  ipcMain.handle('appointments:checkConflict', (_e, input) => db.checkAppointmentConflict(input));
+  ipcMain.handle('appointments:add', (_e, input) => db.addAppointment(input));
+  ipcMain.handle('appointments:update', (_e, id: number, patch) => db.updateAppointment(id, patch));
+  ipcMain.handle('appointments:delete', (_e, id: number) => db.deleteAppointment(id));
   ipcMain.handle('report:exportAnonymized', async () => {
     const today = new Date().toISOString().slice(0, 10);
     const result = await dialog.showSaveDialog({
@@ -129,6 +137,15 @@ function checkReminders() {
     new Notification({
       title: '상담기록관리',
       body: `${a.name} 학생 - 최근 14일간 기록 ${a.count}건, 확인이 필요합니다.`
+    }).show();
+  }
+
+  const today = db.getTodayAppointments() as { student_name: string; start_time: string; end_time: string }[];
+  if (today.length > 0) {
+    const summary = today.map((a) => `${a.start_time} ${a.student_name}`).join(', ');
+    new Notification({
+      title: '오늘의 예약',
+      body: `오늘 예약 ${today.length}건: ${summary}`
     }).show();
   }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import MetricCard from '../components/MetricCard';
+import Calendar from '../components/Calendar';
 
 function initials(name: string) {
   return name.slice(0, 1);
@@ -8,29 +9,32 @@ function initials(name: string) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const navState = location.state as { studentId?: number; studentName?: string } | null;
+
   const [stats, setStats] = useState<MonthlyStats | null>(null);
   const [alerts, setAlerts] = useState<CrisisAlert[]>([]);
   const [recent, setRecent] = useState<ConsultRecord[]>([]);
   const [pinned, setPinned] = useState<Student[]>([]);
-  const [upcoming, setUpcoming] = useState<UpcomingAppointment[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 학생 상세 등 다른 화면에서 "예약 잡기"로 넘어온 경우, 캘린더에 한 번만 전달한다.
+  const [prefill, setPrefill] = useState(navState ?? null);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       window.api.getMonthlyStats(),
       window.api.getCrisisAlerts(),
-      window.api.getRecords({ limit: 10, order: 'desc' }),
-      window.api.getPinnedStudents(),
-      window.api.getUpcomingAppointments(5)
+      window.api.getRecords({ limit: 8, order: 'desc' }),
+      window.api.getPinnedStudents()
     ])
-      .then(([s, a, r, p, u]) => {
+      .then(([s, a, r, p]) => {
         if (cancelled) return;
         setStats(s);
         setAlerts(a);
         setRecent(r);
         setPinned(p);
-        setUpcoming(u);
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -74,7 +78,16 @@ export default function Dashboard() {
         <MetricCard label="생기부 미반영" value={loading ? '—' : stats?.niceUnreflectedCount ?? 0} />
       </div>
 
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="section">
+        <h2 className="section-title">예약 캘린더</h2>
+        <Calendar
+          prefillStudentId={prefill?.studentId ?? null}
+          prefillStudentName={prefill?.studentName ?? null}
+          onPrefillConsumed={() => setPrefill(null)}
+        />
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <div className="section" style={{ flex: '2 1 420px', marginBottom: 12 }}>
           <h2 className="section-title">최근 기록</h2>
           <div className="card">
@@ -118,43 +131,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="section" style={{ marginBottom: 0 }}>
-            <h2 className="section-title">다가오는 일정</h2>
-            <div className="card">
-              {loading ? (
-                <div className="empty-state" style={{ padding: '20px 10px' }}>
-                  불러오는 중…
-                </div>
-              ) : upcoming.length === 0 ? (
-                <div className="empty-state" style={{ padding: '20px 10px' }}>
-                  예정된 다음 일정이 없습니다.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {upcoming.map((u) => (
-                    <div
-                      key={u.id}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                      onClick={() => navigate(`/search/${u.id}`)}
-                    >
-                      <div>
-                        <div style={{ fontSize: 13.5, fontWeight: 500 }}>{u.student_name}</div>
-                        {u.type_name && (
-                          <span className="badge" style={{ background: `${u.type_color}22`, color: u.type_color ?? undefined, marginTop: 2 }}>
-                            <span className="badge-dot" style={{ background: u.type_color ?? undefined }} />
-                            {u.type_name}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{u.next_appointment}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
+        <div style={{ flex: '1 1 260px' }}>
           <div className="section" style={{ marginBottom: 0 }}>
             <h2 className="section-title">유형별 분포</h2>
             <div className="card">

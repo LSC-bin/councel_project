@@ -399,3 +399,110 @@ label.field-label {
 .info-row-label {
   color: var(--text-secondary);
 }
+
+/* ---------- Calendar ---------- */
+.calendar-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.calendar-card {
+  flex: 2 1 560px;
+}
+
+.calendar-side {
+  flex: 1 1 280px;
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.calendar-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 4px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+
+.calendar-cell {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 74px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-card);
+}
+
+.calendar-cell:hover {
+  background: var(--bg-hover);
+}
+
+.calendar-cell.selected {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.calendar-cell.dim {
+  color: var(--text-faint);
+  background: transparent;
+}
+
+.calendar-cell.today .calendar-cell-date {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.calendar-cell-date {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.calendar-cell-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.calendar-chip {
+  font-size: 10.5px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 3px;
+  padding: 1px 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-chip-more {
+  font-size: 10px;
+  color: var(--text-faint);
+}

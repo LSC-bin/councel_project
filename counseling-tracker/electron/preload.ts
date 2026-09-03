@@ -28,6 +28,15 @@ const api = {
   getUpcomingAppointments: (limit = 5) => ipcRenderer.invoke('stats:upcoming', limit),
   exportAnonymizedReport: () => ipcRenderer.invoke('report:exportAnonymized'),
 
+  // 예약(캘린더)
+  getAppointmentsInRange: (startDate: string, endDate: string) => ipcRenderer.invoke('appointments:inRange', startDate, endDate),
+  getAppointmentsForDate: (date: string) => ipcRenderer.invoke('appointments:forDate', date),
+  checkAppointmentConflict: (input: { appt_date: string; start_time: string; end_time: string; excludeId?: number }) =>
+    ipcRenderer.invoke('appointments:checkConflict', input),
+  addAppointment: (input: unknown) => ipcRenderer.invoke('appointments:add', input),
+  updateAppointment: (id: number, patch: unknown) => ipcRenderer.invoke('appointments:update', id, patch),
+  deleteAppointment: (id: number) => ipcRenderer.invoke('appointments:delete', id),
+
   // 유형 / 템플릿
   getConsultTypes: () => ipcRenderer.invoke('types:get'),
   addConsultType: (input: { name: string; color: string }) => ipcRenderer.invoke('types:add', input),

@@ -41,3 +41,15 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+-- 예약(캘린더). consult_records.next_appointment는 레거시 필드로, 이 테이블이 예약의 단일 소스다.
+CREATE TABLE IF NOT EXISTS appointments (
+    id INTEGER PRIMARY KEY,
+    student_id INTEGER REFERENCES students(id),
+    appt_date DATE NOT NULL,
+    start_time TEXT NOT NULL,      -- 'HH:MM'
+    end_time TEXT NOT NULL,        -- 'HH:MM'
+    note TEXT,
+    record_id INTEGER REFERENCES consult_records(id),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

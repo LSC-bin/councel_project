@@ -18,7 +18,6 @@ export default function RecordDetail() {
   const [stateScore, setStateScore] = useState<number | null>(null);
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
   const [followUpDone, setFollowUpDone] = useState(false);
-  const [nextAppointment, setNextAppointment] = useState('');
   const [referredTo, setReferredTo] = useState<string[]>([]);
   const [reflectedInNice, setReflectedInNice] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,7 +34,6 @@ export default function RecordDetail() {
       setStateScore(r.state_score);
       setFollowUpNeeded(!!r.follow_up_needed);
       setFollowUpDone(!!r.follow_up_done);
-      setNextAppointment(r.next_appointment ?? '');
       setReferredTo(r.referred_to ? r.referred_to.split(',').filter(Boolean) : []);
       setReflectedInNice(!!r.reflected_in_nice);
     });
@@ -66,7 +64,6 @@ export default function RecordDetail() {
         state_score: stateScore,
         follow_up_needed: followUpNeeded,
         follow_up_done: followUpDone,
-        next_appointment: nextAppointment || null,
         referred_to: referredTo.join(','),
         reflected_in_nice: reflectedInNice
       });
@@ -124,13 +121,18 @@ export default function RecordDetail() {
             <div className="field" style={{ fontSize: 12.5, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {record.state_score != null && <div>상태 점수: {record.state_score}</div>}
               {!!record.follow_up_needed && <div>후속조치: {record.follow_up_done ? '완료' : '대기'}</div>}
-              {record.next_appointment && <div>다음 상담 예약일: {record.next_appointment}</div>}
               {record.referred_to && <div>유관기관 연계: {record.referred_to.split(',').join(', ')}</div>}
               <div>생기부 반영: {record.reflected_in_nice ? '완료' : '미반영'}</div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary" onClick={() => setEditing(true)}>
                 수정
+              </button>
+              <button
+                className="btn"
+                onClick={() => navigate('/', { state: { studentId: record.student_id, studentName: record.student_name } })}
+              >
+                📅 예약 잡기
               </button>
               <button className="btn" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDelete}>
                 삭제
@@ -168,10 +170,6 @@ export default function RecordDetail() {
                   </button>
                 ))}
               </div>
-            </div>
-            <div className="field">
-              <label className="field-label">다음 상담 예약일 (선택)</label>
-              <input className="input" type="date" value={nextAppointment} onChange={(e) => setNextAppointment(e.target.value)} />
             </div>
             <div className="field">
               <div style={{ display: 'flex', gap: 12 }}>

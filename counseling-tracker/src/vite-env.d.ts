@@ -113,14 +113,28 @@ interface CrisisAlert {
   count: number;
 }
 
-interface UpcomingAppointment {
+interface Appointment {
   id: number;
-  next_appointment: string;
   student_id: number;
+  appt_date: string;
+  start_time: string;
+  end_time: string;
+  note: string | null;
+  record_id: number | null;
+  created_at: string;
   student_name: string;
-  type_name: string | null;
-  type_color: string | null;
 }
+
+interface NewAppointment {
+  student_id: number;
+  appt_date: string;
+  start_time: string;
+  end_time: string;
+  note?: string | null;
+  record_id?: number | null;
+}
+
+type UpcomingAppointment = Appointment;
 
 interface Window {
   api: {
@@ -147,6 +161,21 @@ interface Window {
     getPinnedStudents: () => Promise<Student[]>;
     getUpcomingAppointments: (limit?: number) => Promise<UpcomingAppointment[]>;
     exportAnonymizedReport: () => Promise<{ canceled: boolean; filePath?: string }>;
+
+    getAppointmentsInRange: (startDate: string, endDate: string) => Promise<Appointment[]>;
+    getAppointmentsForDate: (date: string) => Promise<Appointment[]>;
+    checkAppointmentConflict: (input: {
+      appt_date: string;
+      start_time: string;
+      end_time: string;
+      excludeId?: number;
+    }) => Promise<Appointment[]>;
+    addAppointment: (input: NewAppointment) => Promise<{ ok: boolean; appointment?: Appointment; conflicts?: Appointment[] }>;
+    updateAppointment: (
+      id: number,
+      patch: Partial<NewAppointment>
+    ) => Promise<{ ok: boolean; appointment?: Appointment; conflicts?: Appointment[]; error?: string }>;
+    deleteAppointment: (id: number) => Promise<{ ok: boolean }>;
 
     getConsultTypes: () => Promise<ConsultType[]>;
     addConsultType: (input: { name: string; color: string }) => Promise<ConsultType>;

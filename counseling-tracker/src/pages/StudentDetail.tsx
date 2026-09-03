@@ -166,6 +166,9 @@ export default function StudentDetail() {
           <button className="btn btn-primary" onClick={() => navigate('/input', { state: { studentId: student.id, studentName: student.name } })}>
             기록 추가
           </button>
+          <button className="btn" onClick={() => navigate('/', { state: { studentId: student.id, studentName: student.name } })}>
+            📅 예약 잡기
+          </button>
           <button className="btn" onClick={() => setEditing(true)}>
             정보 수정
           </button>
