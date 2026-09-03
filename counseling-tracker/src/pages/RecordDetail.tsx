@@ -296,7 +296,12 @@ export default function RecordDetail() {
             </div>
             <div className="field">
               <label className="field-label">관련 대상 (갈등 상대 등)</label>
-              <RelationEditor relations={relations} setRelations={setRelations} excludeStudentId={record.student_id} />
+              <RelationEditor
+                relations={relations}
+                setRelations={setRelations}
+                excludeStudentId={record.student_id}
+                mainStudentName={record.student_name}
+              />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary" disabled={saving} onClick={handleSave}>

@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
+import { scoreColor } from './studentShared';
 
 const RELATED_TYPES: RelatedType[] = ['학생', '보호자', '교사', '기타'];
 
 // 상담/기록에서 "누구와의 갈등·관계인지"를 선택하는 공통 위젯.
 // 학생끼리의 갈등이면 상대 학생을 검색해서 선택하고, 보호자·교사·기타면 자유 텍스트로 남긴다.
 // 이미 추가된 항목은 칩을 클릭하면 그 자리에서 점수·비고를 수정할 수 있다(지웠다가 다시 추가할 필요 없음).
+// 관계 점수는 항상 "이 기록의 학생(mainStudentName)이 상대를 어떻게 느끼는지"를 나타낸다 (그 반대가 아님).
 export function RelationEditor({
   relations,
   setRelations,
-  excludeStudentId
+  excludeStudentId,
+  mainStudentName
 }: {
   relations: RecordRelationInput[];
   setRelations: (r: RecordRelationInput[]) => void;
   excludeStudentId?: number | null;
+  mainStudentName?: string;
 }) {
   const [adding, setAdding] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -106,7 +110,9 @@ export function RelationEditor({
             <span key={i} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
               <span style={{ cursor: 'pointer' }} title="클릭해서 수정" onClick={() => startEdit(i)}>
                 {r.related_type} · {describe(r)}
-                {r.relation_score != null && ` · ${r.relation_score}점`}
+                {r.relation_score != null && (
+                  <span style={{ color: scoreColor(r.relation_score), fontWeight: 600 }}> · {r.relation_score}점</span>
+                )}
               </span>
               <button
                 type="button"
@@ -182,7 +188,9 @@ export function RelationEditor({
           )}
 
           <div style={{ marginTop: 8 }}>
-            <label className="field-label">관계 점수 (1~5, 선택)</label>
+            <label className="field-label">
+              {mainStudentName ?? '이 학생'}이(가) 상대를 어떻게 느끼는지 (1=갈등·나쁨 ~ 5=친밀·좋음, 선택)
+            </label>
             <div style={{ display: 'flex', gap: 6 }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
@@ -191,14 +199,18 @@ export function RelationEditor({
                   className="btn"
                   style={
                     score === n
-                      ? { background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)', flex: 1, justifyContent: 'center' }
-                      : { flex: 1, justifyContent: 'center' }
+                      ? { background: scoreColor(n), color: '#fff', borderColor: scoreColor(n), flex: 1, justifyContent: 'center' }
+                      : { borderColor: scoreColor(n), color: scoreColor(n), flex: 1, justifyContent: 'center' }
                   }
                   onClick={() => setScore(score === n ? null : n)}
                 >
                   {n}
                 </button>
               ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
+              <span>← 갈등·나쁨</span>
+              <span>친밀·좋음 →</span>
             </div>
           </div>
 

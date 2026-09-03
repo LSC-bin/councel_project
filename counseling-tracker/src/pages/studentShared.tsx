@@ -190,7 +190,7 @@ export function ScoreTrend({ records }: { records: ConsultRecord[] }) {
 }
 
 // 1점(빨강, 갈등) ~ 5점(초록, 좋음) 색상 스케일
-function scoreColor(score: number) {
+export function scoreColor(score: number) {
   const colors = ['#eb5757', '#e0a13a', '#f2c94c', '#6fcf97', '#2f9e44'];
   const idx = Math.max(0, Math.min(4, Math.round(score) - 1));
   return colors[idx];

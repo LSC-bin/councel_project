@@ -329,7 +329,12 @@ export default function RecordInput() {
 
             <div className="field" style={{ marginBottom: 0, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
               <label className="field-label">관련 대상 (갈등 상대 등)</label>
-              <RelationEditor relations={relations} setRelations={setRelations} excludeStudentId={studentId} />
+              <RelationEditor
+                relations={relations}
+                setRelations={setRelations}
+                excludeStudentId={studentId}
+                mainStudentName={selectedStudent?.name}
+              />
             </div>
 
             <div
