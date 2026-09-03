@@ -306,6 +306,10 @@ export function getStudentsWithStats(activeOnly = true) {
   );
 }
 
+export function getStudentById(id: number) {
+  return get('SELECT * FROM students WHERE id = ?', [id]);
+}
+
 export function getStudentSummary(id: number) {
   const totalCount = Number(
     get<{ c: number }>('SELECT COUNT(*) as c FROM consult_records WHERE student_id = ?', [id])?.c ?? 0
@@ -342,6 +346,17 @@ export function getStudentSummary(id: number) {
 }
 
 // ---------- 상담 기록 ----------
+export function getRecordById(id: number) {
+  return get(
+    `SELECT r.*, s.name as student_name, t.name as type_name, t.color as type_color
+     FROM consult_records r
+     JOIN students s ON s.id = r.student_id
+     LEFT JOIN consult_types t ON t.id = r.type_id
+     WHERE r.id = ?`,
+    [id]
+  );
+}
+
 export function getRecords(filter: RecordFilter = {}) {
   const clauses: string[] = [];
   const params: SqlValue[] = [];

@@ -59,7 +59,7 @@ export default function Dashboard() {
       {!loading && pinned.length > 0 && (
         <div className="pinned-row">
           {pinned.map((s) => (
-            <button key={s.id} className="pinned-chip" onClick={() => navigate('/students', { state: { studentId: s.id } })}>
+            <button key={s.id} className="pinned-chip" onClick={() => navigate(`/students/${s.id}`)}>
               <span className="pinned-avatar">{initials(s.name)}</span>
               <span>{s.name}</span>
             </button>
@@ -136,7 +136,7 @@ export default function Dashboard() {
                     <div
                       key={u.id}
                       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                      onClick={() => navigate('/search', { state: { studentId: u.student_id } })}
+                      onClick={() => navigate(`/search/${u.id}`)}
                     >
                       <div>
                         <div style={{ fontSize: 13.5, fontWeight: 500 }}>{u.student_name}</div>

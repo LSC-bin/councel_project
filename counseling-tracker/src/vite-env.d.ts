@@ -133,8 +133,10 @@ interface Window {
     updateStudent: (id: number, patch: Partial<NewStudent>) => Promise<Student>;
     deleteStudent: (id: number) => Promise<{ ok: boolean }>;
     getStudentSummary: (id: number) => Promise<StudentSummary>;
+    getStudentById: (id: number) => Promise<Student | undefined>;
 
     getRecords: (filter?: RecordFilter) => Promise<ConsultRecord[]>;
+    getRecordById: (id: number) => Promise<ConsultRecord | undefined>;
     addRecord: (record: NewRecord) => Promise<ConsultRecord>;
     updateRecord: (id: number, patch: Partial<NewRecord>) => Promise<ConsultRecord>;
     deleteRecord: (id: number) => Promise<{ ok: boolean }>;

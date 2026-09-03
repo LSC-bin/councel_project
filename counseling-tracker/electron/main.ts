@@ -51,9 +51,11 @@ function registerIpcHandlers() {
   ipcMain.handle('students:update', (_e, id: number, patch) => db.updateStudent(id, patch));
   ipcMain.handle('students:delete', (_e, id: number) => db.deleteStudent(id));
   ipcMain.handle('students:summary', (_e, id: number) => db.getStudentSummary(id));
+  ipcMain.handle('students:getById', (_e, id: number) => db.getStudentById(id));
 
   // 상담 기록
   ipcMain.handle('records:get', (_e, filter) => db.getRecords(filter));
+  ipcMain.handle('records:getById', (_e, id: number) => db.getRecordById(id));
   ipcMain.handle('records:add', (_e, record) => db.addRecord(record));
   ipcMain.handle('records:update', (_e, id: number, patch) => db.updateRecord(id, patch));
   ipcMain.handle('records:delete', (_e, id: number) => db.deleteRecord(id));

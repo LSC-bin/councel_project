@@ -5,7 +5,9 @@ import LockScreen from './components/LockScreen';
 import Dashboard from './pages/Dashboard';
 import RecordInput from './pages/RecordInput';
 import SearchView from './pages/SearchView';
+import RecordDetail from './pages/RecordDetail';
 import StudentsView from './pages/StudentsView';
+import StudentDetail from './pages/StudentDetail';
 import Statistics from './pages/Statistics';
 import ReportExport from './pages/ReportExport';
 import Settings from './pages/Settings';
@@ -33,7 +35,9 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/input" element={<RecordInput />} />
           <Route path="/search" element={<SearchView />} />
+          <Route path="/search/:id" element={<RecordDetail />} />
           <Route path="/students" element={<StudentsView />} />
+          <Route path="/students/:id" element={<StudentDetail />} />
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/report" element={<ReportExport />} />
           <Route path="/settings" element={<Settings />} />

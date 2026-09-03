@@ -11,9 +11,11 @@ const api = {
   updateStudent: (id: number, patch: unknown) => ipcRenderer.invoke('students:update', id, patch),
   deleteStudent: (id: number) => ipcRenderer.invoke('students:delete', id),
   getStudentSummary: (id: number) => ipcRenderer.invoke('students:summary', id),
+  getStudentById: (id: number) => ipcRenderer.invoke('students:getById', id),
 
   // 상담 기록
   getRecords: (filter?: unknown) => ipcRenderer.invoke('records:get', filter),
+  getRecordById: (id: number) => ipcRenderer.invoke('records:getById', id),
   addRecord: (record: unknown) => ipcRenderer.invoke('records:add', record),
   updateRecord: (id: number, patch: unknown) => ipcRenderer.invoke('records:update', id, patch),
   deleteRecord: (id: number) => ipcRenderer.invoke('records:delete', id),
