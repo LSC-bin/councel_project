@@ -209,7 +209,7 @@ export default function StudentDetail() {
       )}
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 320px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ flex: '1 1 320px' }}>
           <div className="card">
             <div className="info-grid">
               <InfoRow label="학년도" value={student.school_year} />
@@ -220,46 +220,46 @@ export default function StudentDetail() {
               <InfoRow label="특이사항" value={student.health_note} tone="danger" />
               <InfoRow label="메모" value={student.memo} />
             </div>
-          </div>
 
-          {relationSummary && (relationSummary.students.length > 0 || relationSummary.others.length > 0) && (
-            <div className="card">
-              <div className="field-label">관계 현황</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {relationSummary.students.map((s) => (
-                  <button
-                    key={s.studentId}
-                    type="button"
-                    className="badge"
-                    style={{ background: 'var(--bg-hover)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}
-                    onClick={() => navigate(`/students/${s.studentId}`)}
-                  >
-                    {s.name} {s.count}회
-                  </button>
-                ))}
-                {relationSummary.others.map((o) => (
-                  <span key={o.type} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
-                    {o.type} {o.count}회
-                  </span>
-                ))}
+            {relationSummary && (relationSummary.students.length > 0 || relationSummary.others.length > 0) && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                <div className="field-label">관계 현황</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {relationSummary.students.map((s) => (
+                    <button
+                      key={s.studentId}
+                      type="button"
+                      className="badge"
+                      style={{ background: 'var(--bg-hover)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}
+                      onClick={() => navigate(`/students/${s.studentId}`)}
+                    >
+                      {s.name} {s.count}회
+                    </button>
+                  ))}
+                  {relationSummary.others.map((o) => (
+                    <span key={o.type} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
+                      {o.type} {o.count}회
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {summary && (
-            <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: 0 }}>
-              <MiniMetric label="총 기록 건수" value={summary.totalCount} />
-              <MiniMetric label="후속조치 대기" value={summary.followUpPending} />
-              <MiniMetric label="생기부 미반영" value={summary.niceUnreflectedCount} />
-              <MiniMetric label="최근 기록일" value={summary.lastRecordDate ?? '-'} />
-            </div>
-          )}
+            {summary && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 12px' }}>
+                <MiniMetric label="총 기록 건수" value={summary.totalCount} />
+                <MiniMetric label="후속조치 대기" value={summary.followUpPending} />
+                <MiniMetric label="생기부 미반영" value={summary.niceUnreflectedCount} />
+                <MiniMetric label="최근 기록일" value={summary.lastRecordDate ?? '-'} />
+              </div>
+            )}
 
-          {records.some((r) => r.state_score != null) && (
-            <div className="card">
-              <ScoreTrend records={records} />
-            </div>
-          )}
+            {records.some((r) => r.state_score != null) && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                <ScoreTrend records={records} />
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ flex: '2 1 420px' }}>

@@ -179,13 +179,14 @@ export function InfoRow({ label, value, tone }: { label: string; value?: string 
   );
 }
 
+// 카드 안에 중첩해서 쓰는 통계 한 쌍(테두리 없음) - 대시보드 최상단 MetricCard와 달리 이미 카드 안이라 박스가 필요 없다.
 export function MiniMetric({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="metric-card" style={{ padding: '10px 12px' }}>
-      <div className="metric-label" style={{ marginBottom: 3 }}>
+    <div>
+      <div className="metric-label" style={{ marginBottom: 2 }}>
         {label}
       </div>
-      <div className="metric-value" style={{ fontSize: 18 }}>
+      <div className="metric-value" style={{ fontSize: 17 }}>
         {value}
       </div>
     </div>

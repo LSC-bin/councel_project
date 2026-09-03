@@ -225,10 +225,8 @@ export default function RecordInput() {
             {prevScore != null && (
               <p style={{ color: 'var(--text-faint)', fontSize: 12, marginTop: 8, marginBottom: 0 }}>직전 상태 점수: {prevScore}점</p>
             )}
-          </div>
 
-          <div className="card">
-            <div className="field">
+            <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               <label className="field-label">날짜</label>
               <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
@@ -271,7 +269,7 @@ export default function RecordInput() {
 
         <div style={{ flex: '2 1 380px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="card">
-            <div className="field" style={{ marginBottom: 0 }}>
+            <div className="field">
               <label className="field-label">내용</label>
               <textarea
                 ref={textareaRef}
@@ -281,10 +279,8 @@ export default function RecordInput() {
                 placeholder="기록 내용을 입력하세요"
               />
             </div>
-          </div>
 
-          <div className="card">
-            <div className="field">
+            <div className="field" style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               <label className="field-label">
                 상태 점수 (1~5)
                 <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}> · 선택 사항</span>
