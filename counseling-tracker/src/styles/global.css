@@ -400,24 +400,41 @@ label.field-label {
   color: var(--text-secondary);
 }
 
-/* ---------- Calendar ---------- */
-.calendar-layout {
+/* ---------- Modal ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.45);
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.calendar-card {
-  flex: 2 1 560px;
-}
-
-.calendar-side {
-  flex: 1 1 280px;
-  max-height: 560px;
+.modal-card {
+  width: 100%;
+  margin: 20px;
+  max-height: calc(100vh - 80px);
   overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(15, 15, 15, 0.2);
 }
 
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-body {
+  padding: 14px 16px;
+}
+
+/* ---------- Calendar ---------- */
 .calendar-header {
   display: flex;
   align-items: center;
@@ -451,22 +468,18 @@ label.field-label {
 .calendar-cell {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  min-height: 74px;
-  padding: 4px;
+  min-height: 86px;
+  padding: 5px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 2px;
   background: var(--bg-card);
+  user-select: none;
 }
 
 .calendar-cell:hover {
   background: var(--bg-hover);
-}
-
-.calendar-cell.selected {
-  border-color: var(--accent);
-  background: var(--accent-bg);
 }
 
 .calendar-cell.dim {

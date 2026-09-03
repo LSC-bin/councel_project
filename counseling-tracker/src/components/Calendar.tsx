@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Modal from './Modal';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -36,9 +37,9 @@ interface Props {
 
 export default function Calendar({ prefillStudentId, prefillStudentName, onPrefillConsumed }: Props) {
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()));
-  const [selectedDate, setSelectedDate] = useState(todayISO());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalDate, setModalDate] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const grid = useMemo(() => buildGrid(viewMonth), [viewMonth]);
@@ -60,9 +61,9 @@ export default function Calendar({ prefillStudentId, prefillStudentName, onPrefi
 
   useEffect(() => {
     if (prefillStudentId) {
-      setShowAddForm(true);
-      setSelectedDate(todayISO());
       setViewMonth(startOfMonth(new Date()));
+      setModalDate(todayISO());
+      setShowAddForm(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefillStudentId]);
@@ -78,110 +79,112 @@ export default function Calendar({ prefillStudentId, prefillStudentName, onPrefi
     return map;
   }, [appointments]);
 
-  const selectedList = byDate.get(selectedDate) ?? [];
   const today = todayISO();
+  const modalList = modalDate ? byDate.get(modalDate) ?? [] : [];
 
   function goToMonth(delta: number) {
     setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
   }
 
+  function closeModal() {
+    setModalDate(null);
+    setShowAddForm(false);
+    onPrefillConsumed?.();
+  }
+
   return (
-    <div className="calendar-layout">
-      <div className="card calendar-card">
-        <div className="calendar-header">
-          <button className="btn" onClick={() => goToMonth(-1)}>
-            ‹
-          </button>
-          <div className="calendar-title">
-            {viewMonth.getFullYear()}년 {viewMonth.getMonth() + 1}월
+    <div className="card calendar-card">
+      <div className="calendar-header">
+        <button className="btn" onClick={() => goToMonth(-1)}>
+          ‹
+        </button>
+        <div className="calendar-title">
+          {viewMonth.getFullYear()}년 {viewMonth.getMonth() + 1}월
+        </div>
+        <button className="btn" onClick={() => goToMonth(1)}>
+          ›
+        </button>
+        <button
+          className="btn"
+          style={{ marginLeft: 'auto', fontSize: 12 }}
+          onClick={() => setViewMonth(startOfMonth(new Date()))}
+        >
+          오늘
+        </button>
+      </div>
+
+      <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: '0 0 8px' }}>날짜를 더블클릭하면 예약을 보고 추가할 수 있습니다.</p>
+
+      <div className="calendar-grid calendar-weekdays">
+        {WEEKDAYS.map((w) => (
+          <div key={w} className="calendar-weekday">
+            {w}
           </div>
-          <button className="btn" onClick={() => goToMonth(1)}>
-            ›
-          </button>
-          <button
-            className="btn"
-            style={{ marginLeft: 'auto', fontSize: 12 }}
-            onClick={() => {
-              setViewMonth(startOfMonth(new Date()));
-              setSelectedDate(today);
-            }}
-          >
-            오늘
-          </button>
-        </div>
+        ))}
+      </div>
 
-        <div className="calendar-grid calendar-weekdays">
-          {WEEKDAYS.map((w) => (
-            <div key={w} className="calendar-weekday">
-              {w}
-            </div>
-          ))}
-        </div>
-
-        <div className="calendar-grid">
-          {grid.map((d) => {
-            const iso = toISODate(d);
-            const inMonth = d.getMonth() === viewMonth.getMonth();
-            const list = byDate.get(iso) ?? [];
-            const isSelected = iso === selectedDate;
-            const isToday = iso === today;
-            return (
-              <div
-                key={iso}
-                className={
-                  'calendar-cell' + (isSelected ? ' selected' : '') + (inMonth ? '' : ' dim') + (isToday ? ' today' : '')
-                }
-                onClick={() => setSelectedDate(iso)}
-              >
-                <div className="calendar-cell-date">{d.getDate()}</div>
-                <div className="calendar-cell-items">
-                  {list.slice(0, 3).map((a) => (
-                    <div key={a.id} className="calendar-chip">
-                      {a.start_time} {a.student_name}
-                    </div>
-                  ))}
-                  {list.length > 3 && <div className="calendar-chip-more">+{list.length - 3}</div>}
-                </div>
+      <div className="calendar-grid">
+        {grid.map((d) => {
+          const iso = toISODate(d);
+          const inMonth = d.getMonth() === viewMonth.getMonth();
+          const list = byDate.get(iso) ?? [];
+          const isToday = iso === today;
+          return (
+            <div
+              key={iso}
+              className={'calendar-cell' + (inMonth ? '' : ' dim') + (isToday ? ' today' : '')}
+              onDoubleClick={() => setModalDate(iso)}
+              title="더블클릭하여 예약 보기/추가"
+            >
+              <div className="calendar-cell-date">{d.getDate()}</div>
+              <div className="calendar-cell-items">
+                {list.slice(0, 3).map((a) => (
+                  <div key={a.id} className="calendar-chip">
+                    {a.start_time} {a.student_name}
+                  </div>
+                ))}
+                {list.length > 3 && <div className="calendar-chip-more">+{list.length - 3}</div>}
               </div>
-            );
-          })}
-        </div>
-        {loading && <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6 }}>불러오는 중…</div>}
+            </div>
+          );
+        })}
       </div>
+      {loading && <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6 }}>불러오는 중…</div>}
 
-      <div className="card calendar-side">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{selectedDate}</div>
-          <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: 12.5 }} onClick={() => setShowAddForm((v) => !v)}>
-            {showAddForm ? '닫기' : '+ 예약 추가'}
-          </button>
-        </div>
-
-        {showAddForm && (
-          <AddAppointmentForm
-            date={selectedDate}
-            prefillStudentId={prefillStudentId}
-            prefillStudentName={prefillStudentName}
-            onDone={() => {
-              setShowAddForm(false);
-              refresh();
-              onPrefillConsumed?.();
-            }}
-          />
-        )}
-
-        {selectedList.length === 0 ? (
-          <div className="empty-state" style={{ padding: '20px 10px' }}>
-            예약이 없습니다.
+      {modalDate && (
+        <Modal title={modalDate} onClose={closeModal} maxWidth={460}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+            <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: 12.5 }} onClick={() => setShowAddForm((v) => !v)}>
+              {showAddForm ? '닫기' : '+ 예약 추가'}
+            </button>
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {selectedList.map((a) => (
-              <AppointmentRow key={a.id} appointment={a} onChanged={refresh} />
-            ))}
-          </div>
-        )}
-      </div>
+
+          {showAddForm && (
+            <AddAppointmentForm
+              date={modalDate}
+              prefillStudentId={prefillStudentId}
+              prefillStudentName={prefillStudentName}
+              onDone={() => {
+                setShowAddForm(false);
+                refresh();
+                onPrefillConsumed?.();
+              }}
+            />
+          )}
+
+          {modalList.length === 0 ? (
+            <div className="empty-state" style={{ padding: '20px 10px' }}>
+              예약이 없습니다.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {modalList.map((a) => (
+                <AppointmentRow key={a.id} appointment={a} onChanged={refresh} />
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }
