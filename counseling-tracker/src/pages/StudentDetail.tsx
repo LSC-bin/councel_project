@@ -121,8 +121,8 @@ export default function StudentDetail() {
   if (notFound) {
     return (
       <div>
-        <button className="btn" style={{ marginBottom: 12 }} onClick={() => navigate('/students')}>
-          ← 목록으로
+        <button className="btn-icon" title="목록으로" style={{ marginBottom: 12 }} onClick={() => navigate('/students')}>
+          ←
         </button>
         <div className="card empty-state">학생을 찾을 수 없습니다.</div>
       </div>
@@ -135,8 +135,8 @@ export default function StudentDetail() {
 
   return (
     <div>
-      <button className="btn" style={{ marginBottom: 12 }} onClick={() => navigate('/students')}>
-        ← 목록으로
+      <button className="btn-icon" title="목록으로" style={{ marginBottom: 12 }} onClick={() => navigate('/students')}>
+        ←
       </button>
 
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
