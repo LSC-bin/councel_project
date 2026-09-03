@@ -208,7 +208,7 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
   return (
     <div>
       <div className="field-label">관계 점수 그래프</div>
-      <div style={{ height: Math.max(70, entries.length * 30) }}>
+      <div style={{ height: 36 + entries.length * 34 }}>
         <Bar
           data={{
             labels: entries.map((e) => e.label),
@@ -217,7 +217,9 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
                 data: entries.map((e) => e.score),
                 backgroundColor: entries.map((e) => scoreColor(e.score)),
                 borderRadius: 4,
-                barThickness: 16
+                maxBarThickness: 18,
+                categoryPercentage: 0.6,
+                barPercentage: 0.9
               }
             ]
           }}
@@ -226,6 +228,7 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
+              legend: { display: false },
               tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x}점` } }
             },
             scales: {
