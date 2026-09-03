@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { RelationEditor } from './recordShared';
 
 const REFERRAL_OPTIONS = ['Wee클래스', '학폭담당', '보건교사', '학부모', '기타'];
 
@@ -27,6 +28,7 @@ export default function RecordInput() {
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
   const [referredTo, setReferredTo] = useState<string[]>([]);
   const [reflectedInNice, setReflectedInNice] = useState(false);
+  const [relations, setRelations] = useState<RecordRelationInput[]>([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -92,7 +94,7 @@ export default function RecordInput() {
     }
     setSaving(true);
     try {
-      await window.api.addRecord({
+      const record = await window.api.addRecord({
         student_id: studentId,
         type_id: typeId,
         record_date: date,
@@ -102,12 +104,16 @@ export default function RecordInput() {
         referred_to: referredTo.join(','),
         reflected_in_nice: reflectedInNice
       });
+      if (relations.length > 0) {
+        await window.api.setRecordRelations(record.id, relations);
+      }
       setToast('저장되었습니다.');
       setContent('');
       setStateScore(null);
       setFollowUpNeeded(false);
       setReferredTo([]);
       setReflectedInNice(false);
+      setRelations([]);
     } finally {
       setSaving(false);
       setTimeout(() => setToast(null), 2500);
@@ -226,7 +232,7 @@ export default function RecordInput() {
               <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
 
-            <div className="field" style={{ marginBottom: 0 }}>
+            <div className="field" style={{ marginBottom: templates.length > 0 ? 12 : 0 }}>
               <label className="field-label">기록 유형</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {types.map((t) => (
@@ -246,20 +252,20 @@ export default function RecordInput() {
                 ))}
               </div>
             </div>
-          </div>
 
-          {templates.length > 0 && (
-            <div className="card">
-              <div className="field-label">빠른 입력 {selectedType && `— ${selectedType.name}`}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {templates.map((tpl) => (
-                  <button key={tpl.id} type="button" className="btn" style={{ fontSize: 12.5 }} onClick={() => insertTemplate(tpl.text)}>
-                    {tpl.text}
-                  </button>
-                ))}
+            {templates.length > 0 && (
+              <div className="field" style={{ marginBottom: 0, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                <label className="field-label">빠른 입력 {selectedType && `— ${selectedType.name}`}</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {templates.map((tpl) => (
+                    <button key={tpl.id} type="button" className="btn" style={{ fontSize: 12.5 }} onClick={() => insertTemplate(tpl.text)}>
+                      {tpl.text}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div style={{ flex: '2 1 380px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -312,7 +318,7 @@ export default function RecordInput() {
               </label>
             </div>
 
-            <div className="field" style={{ marginTop: 12, marginBottom: 0 }}>
+            <div className="field" style={{ marginTop: 12, marginBottom: 12 }}>
               <label className="field-label">유관기관 연계</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 {REFERRAL_OPTIONS.map((opt) => (
@@ -323,23 +329,39 @@ export default function RecordInput() {
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
-                {saving ? '저장 중…' : '저장'}
-              </button>
-              {toast && <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{toast}</span>}
+            <div className="field" style={{ marginBottom: 0, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <label className="field-label">관련 대상 (갈등 상대 등)</label>
+              <RelationEditor relations={relations} setRelations={setRelations} excludeStudentId={studentId} />
             </div>
-            <button
-              type="button"
-              className="btn"
-              style={{ fontSize: 12.5 }}
-              onClick={() => navigate('/', selectedStudent ? { state: { studentId: selectedStudent.id, studentName: selectedStudent.name } } : undefined)}
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 10,
+                marginTop: 14,
+                paddingTop: 12,
+                borderTop: '1px solid var(--border)'
+              }}
             >
-              📅 다음 상담 예약은 캘린더에서
-            </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
+                  {saving ? '저장 중…' : '저장'}
+                </button>
+                {toast && <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{toast}</span>}
+              </div>
+              <button
+                type="button"
+                className="btn"
+                style={{ fontSize: 12.5 }}
+                onClick={() => navigate('/', selectedStudent ? { state: { studentId: selectedStudent.id, studentName: selectedStudent.name } } : undefined)}
+              >
+                📅 다음 상담 예약은 캘린더에서
+              </button>
+            </div>
           </div>
         </div>
       </div>

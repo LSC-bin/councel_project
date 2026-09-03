@@ -187,10 +187,109 @@ export default function Calendar({ prefillStudentId, prefillStudentName, onPrefi
 }
 
 function AppointmentRow({ appointment, onChanged }: { appointment: Appointment; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [apptDate, setApptDate] = useState(appointment.appt_date);
+  const [startTime, setStartTime] = useState(appointment.start_time);
+  const [endTime, setEndTime] = useState(appointment.end_time);
+  const [note, setNote] = useState(appointment.note ?? '');
+  const [conflicts, setConflicts] = useState<Appointment[]>([]);
+  const [checking, setChecking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editing || !startTime || !endTime || startTime >= endTime) {
+      setConflicts([]);
+      return;
+    }
+    setChecking(true);
+    const timer = setTimeout(() => {
+      window.api
+        .checkAppointmentConflict({ appt_date: apptDate, start_time: startTime, end_time: endTime, excludeId: appointment.id })
+        .then(setConflicts)
+        .finally(() => setChecking(false));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [editing, apptDate, startTime, endTime, appointment.id]);
+
   async function handleDelete() {
     if (!confirm(`${appointment.student_name} 학생 예약(${appointment.start_time}~${appointment.end_time})을 삭제할까요?`)) return;
     await window.api.deleteAppointment(appointment.id);
     onChanged();
+  }
+
+  async function handleSave() {
+    setError(null);
+    if (startTime >= endTime) {
+      setError('종료 시간은 시작 시간보다 늦어야 합니다.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await window.api.updateAppointment(appointment.id, {
+        appt_date: apptDate,
+        start_time: startTime,
+        end_time: endTime,
+        note: note || null
+      });
+      if (!result.ok) {
+        setConflicts(result.conflicts ?? []);
+        setError(result.error ?? '선택한 시간에 이미 예약이 있습니다.');
+        return;
+      }
+      setEditing(false);
+      onChanged();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="card" style={{ background: 'var(--bg-hover)' }}>
+        <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>{appointment.student_name} 예약 수정</div>
+        <div className="field">
+          <label className="field-label">날짜</label>
+          <input className="input" type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label className="field-label">시작</label>
+            <input className="input" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label className="field-label">종료</label>
+            <input className="input" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          </div>
+        </div>
+        <div className="field">
+          <label className="field-label">메모</label>
+          <input className="input" value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+
+        {checking ? (
+          <p style={{ fontSize: 12, color: 'var(--text-faint)' }}>확인 중…</p>
+        ) : startTime < endTime ? (
+          conflicts.length > 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--danger)' }}>
+              겹치는 예약: {conflicts.map((c) => `${c.student_name}(${c.start_time}~${c.end_time})`).join(', ')}
+            </p>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--success)' }}>✓ 예약 가능한 시간입니다.</p>
+          )
+        ) : null}
+        {error && <p style={{ fontSize: 12.5, color: 'var(--danger)' }}>{error}</p>}
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn btn-primary" style={{ fontSize: 12.5 }} disabled={saving || conflicts.length > 0} onClick={handleSave}>
+            {saving ? '저장 중…' : '저장'}
+          </button>
+          <button className="btn" style={{ fontSize: 12.5 }} onClick={() => setEditing(false)}>
+            취소
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -201,9 +300,14 @@ function AppointmentRow({ appointment, onChanged }: { appointment: Appointment; 
         </div>
         {appointment.note && <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{appointment.note}</div>}
       </div>
-      <button className="btn" style={{ padding: '2px 8px', flexShrink: 0 }} onClick={handleDelete}>
-        삭제
-      </button>
+      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+        <button className="btn" style={{ padding: '2px 8px' }} onClick={() => setEditing(true)}>
+          수정
+        </button>
+        <button className="btn" style={{ padding: '2px 8px' }} onClick={handleDelete}>
+          삭제
+        </button>
+      </div>
     </div>
   );
 }

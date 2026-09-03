@@ -31,6 +31,7 @@ export default function StudentDetail() {
   const [summary, setSummary] = useState<StudentSummary | null>(null);
   const [records, setRecords] = useState<ConsultRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [relationSummary, setRelationSummary] = useState<StudentRelationSummary | null>(null);
 
   function loadStudent() {
     window.api.getStudentById(studentId).then((s) => {
@@ -61,6 +62,7 @@ export default function StudentDetail() {
         setRecords(r);
       })
       .finally(() => setLoadingHistory(false));
+    window.api.getStudentRelationSummary(studentId).then(setRelationSummary);
   }
 
   useEffect(() => {
@@ -219,6 +221,30 @@ export default function StudentDetail() {
               <InfoRow label="메모" value={student.memo} />
             </div>
           </div>
+
+          {relationSummary && (relationSummary.students.length > 0 || relationSummary.others.length > 0) && (
+            <div className="card">
+              <div className="field-label">관계 현황</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {relationSummary.students.map((s) => (
+                  <button
+                    key={s.studentId}
+                    type="button"
+                    className="badge"
+                    style={{ background: 'var(--bg-hover)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}
+                    onClick={() => navigate(`/students/${s.studentId}`)}
+                  >
+                    {s.name} {s.count}회
+                  </button>
+                ))}
+                {relationSummary.others.map((o) => (
+                  <span key={o.type} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
+                    {o.type} {o.count}회
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {summary && (
             <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: 0 }}>

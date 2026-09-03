@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { RelationEditor } from './recordShared';
 
 const REFERRAL_OPTIONS = ['Wee클래스', '학폭담당', '보건교사', '학부모', '기타'];
 
@@ -20,7 +21,16 @@ export default function RecordDetail() {
   const [followUpDone, setFollowUpDone] = useState(false);
   const [referredTo, setReferredTo] = useState<string[]>([]);
   const [reflectedInNice, setReflectedInNice] = useState(false);
+  const [relations, setRelations] = useState<RecordRelationInput[]>([]);
+  const [savedRelations, setSavedRelations] = useState<RecordRelation[]>([]);
   const [saving, setSaving] = useState(false);
+
+  function loadRelations() {
+    window.api.getRecordRelations(recordId).then((rows) => {
+      setSavedRelations(rows);
+      setRelations(rows.map((r) => ({ related_type: r.related_type, related_student_id: r.related_student_id, related_label: r.related_label })));
+    });
+  }
 
   function loadRecord() {
     window.api.getRecordById(recordId).then((r) => {
@@ -47,6 +57,7 @@ export default function RecordDetail() {
     setNotFound(false);
     setEditing(false);
     loadRecord();
+    loadRelations();
     window.api.getConsultTypes().then(setTypes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordId]);
@@ -67,8 +78,10 @@ export default function RecordDetail() {
         referred_to: referredTo.join(','),
         reflected_in_nice: reflectedInNice
       });
+      await window.api.setRecordRelations(recordId, relations);
       setEditing(false);
       loadRecord();
+      loadRelations();
     } finally {
       setSaving(false);
     }
@@ -124,6 +137,15 @@ export default function RecordDetail() {
               {record.referred_to && <div>유관기관 연계: {record.referred_to.split(',').join(', ')}</div>}
               <div>생기부 반영: {record.reflected_in_nice ? '완료' : '미반영'}</div>
             </div>
+            {savedRelations.length > 0 && (
+              <div className="field" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {savedRelations.map((r) => (
+                  <span key={r.id} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
+                    {r.related_type} · {r.related_type === '학생' ? r.related_student_name : r.related_label}
+                  </span>
+                ))}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary" onClick={() => setEditing(true)}>
                 수정
@@ -201,6 +223,10 @@ export default function RecordDetail() {
                 <input type="checkbox" checked={reflectedInNice} onChange={(e) => setReflectedInNice(e.target.checked)} />
                 생기부 반영 완료
               </label>
+            </div>
+            <div className="field">
+              <label className="field-label">관련 대상 (갈등 상대 등)</label>
+              <RelationEditor relations={relations} setRelations={setRelations} excludeStudentId={record.student_id} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary" disabled={saving} onClick={handleSave}>

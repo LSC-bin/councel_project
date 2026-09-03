@@ -113,6 +113,28 @@ interface CrisisAlert {
   count: number;
 }
 
+type RelatedType = '학생' | '보호자' | '교사' | '기타';
+
+interface RecordRelation {
+  id: number;
+  record_id: number;
+  related_type: RelatedType;
+  related_student_id: number | null;
+  related_label: string | null;
+  related_student_name: string | null;
+}
+
+interface RecordRelationInput {
+  related_type: RelatedType;
+  related_student_id?: number | null;
+  related_label?: string | null;
+}
+
+interface StudentRelationSummary {
+  students: { studentId: number; name: string; count: number }[];
+  others: { type: string; count: number }[];
+}
+
 interface Appointment {
   id: number;
   student_id: number;
@@ -154,6 +176,9 @@ interface Window {
     addRecord: (record: NewRecord) => Promise<ConsultRecord>;
     updateRecord: (id: number, patch: Partial<NewRecord>) => Promise<ConsultRecord>;
     deleteRecord: (id: number) => Promise<{ ok: boolean }>;
+    getRecordRelations: (recordId: number) => Promise<RecordRelation[]>;
+    setRecordRelations: (recordId: number, relations: RecordRelationInput[]) => Promise<RecordRelation[]>;
+    getStudentRelationSummary: (studentId: number) => Promise<StudentRelationSummary>;
 
     getMonthlyStats: () => Promise<MonthlyStats>;
     getCrisisAlerts: () => Promise<CrisisAlert[]>;

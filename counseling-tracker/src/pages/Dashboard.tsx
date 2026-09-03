@@ -89,7 +89,19 @@ export default function Dashboard() {
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <div className="section" style={{ flex: '2 1 420px', marginBottom: 12 }}>
-          <h2 className="section-title">최근 기록</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <h2 className="section-title" style={{ margin: 0 }}>
+              최근 기록
+            </h2>
+            <button
+              className="btn"
+              style={{ padding: '2px 10px', fontSize: 12.5 }}
+              onClick={() => navigate('/search')}
+              title="조회·검색으로 이동"
+            >
+              +
+            </button>
+          </div>
           <div className="card">
             {loading ? (
               <div className="empty-state">불러오는 중…</div>

@@ -19,6 +19,9 @@ const api = {
   addRecord: (record: unknown) => ipcRenderer.invoke('records:add', record),
   updateRecord: (id: number, patch: unknown) => ipcRenderer.invoke('records:update', id, patch),
   deleteRecord: (id: number) => ipcRenderer.invoke('records:delete', id),
+  getRecordRelations: (recordId: number) => ipcRenderer.invoke('records:getRelations', recordId),
+  setRecordRelations: (recordId: number, relations: unknown) => ipcRenderer.invoke('records:setRelations', recordId, relations),
+  getStudentRelationSummary: (studentId: number) => ipcRenderer.invoke('students:relationSummary', studentId),
 
   // 통계 / 위기감지
   getMonthlyStats: () => ipcRenderer.invoke('stats:monthly'),

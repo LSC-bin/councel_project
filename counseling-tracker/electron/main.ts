@@ -59,6 +59,9 @@ function registerIpcHandlers() {
   ipcMain.handle('records:add', (_e, record) => db.addRecord(record));
   ipcMain.handle('records:update', (_e, id: number, patch) => db.updateRecord(id, patch));
   ipcMain.handle('records:delete', (_e, id: number) => db.deleteRecord(id));
+  ipcMain.handle('records:getRelations', (_e, recordId: number) => db.getRecordRelations(recordId));
+  ipcMain.handle('records:setRelations', (_e, recordId: number, relations) => db.setRecordRelations(recordId, relations));
+  ipcMain.handle('students:relationSummary', (_e, studentId: number) => db.getStudentRelationSummary(studentId));
 
   // 통계 / 위기감지
   ipcMain.handle('stats:monthly', () => db.getMonthlyStats());

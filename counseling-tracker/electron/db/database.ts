@@ -107,6 +107,14 @@ CREATE TABLE IF NOT EXISTS appointments (
     record_id INTEGER REFERENCES consult_records(id),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS record_relations (
+    id INTEGER PRIMARY KEY,
+    record_id INTEGER REFERENCES consult_records(id),
+    related_type TEXT NOT NULL,
+    related_student_id INTEGER REFERENCES students(id),
+    related_label TEXT
+);
 `;
 
 let db: SqlJsDatabase;
@@ -460,8 +468,83 @@ export function updateRecord(id: number, patch: Partial<NewRecord>) {
 }
 
 export function deleteRecord(id: number) {
-  run('DELETE FROM consult_records WHERE id = ?', [id]);
+  db.run('DELETE FROM record_relations WHERE record_id = ?', [id]);
+  db.run('DELETE FROM consult_records WHERE id = ?', [id]);
+  persist();
   return { ok: true };
+}
+
+// ---------- 관계(갈등 대상) ----------
+export interface RecordRelationInput {
+  related_type: '학생' | '보호자' | '교사' | '기타';
+  related_student_id?: number | null;
+  related_label?: string | null;
+}
+
+export function getRecordRelations(recordId: number) {
+  return all(
+    `SELECT rr.*, s.name as related_student_name
+     FROM record_relations rr
+     LEFT JOIN students s ON s.id = rr.related_student_id
+     WHERE rr.record_id = ?
+     ORDER BY rr.id`,
+    [recordId]
+  );
+}
+
+// 기록의 관계 목록을 통째로 교체한다(단순하게 유지: 기존 것 지우고 새로 삽입).
+export function setRecordRelations(recordId: number, relations: RecordRelationInput[]) {
+  db.run('DELETE FROM record_relations WHERE record_id = ?', [recordId]);
+  for (const r of relations) {
+    db.run('INSERT INTO record_relations (record_id, related_type, related_student_id, related_label) VALUES (?, ?, ?, ?)', [
+      recordId,
+      r.related_type,
+      r.related_student_id ?? null,
+      r.related_label ?? null
+    ]);
+  }
+  persist();
+  return getRecordRelations(recordId);
+}
+
+// 특정 학생과 관련된 관계 현황: 이 학생이 작성 주체인 기록에서 언급한 상대 + 다른 학생 기록에서 이 학생이 상대로 언급된 경우를 합산.
+export function getStudentRelationSummary(studentId: number) {
+  const asAuthor = all<{ other_id: number; other_name: string; cnt: number }>(
+    `SELECT rr.related_student_id as other_id, s2.name as other_name, COUNT(*) as cnt
+     FROM record_relations rr
+     JOIN consult_records r ON r.id = rr.record_id
+     JOIN students s2 ON s2.id = rr.related_student_id
+     WHERE r.student_id = ? AND rr.related_type = '학생'
+     GROUP BY rr.related_student_id`,
+    [studentId]
+  );
+  const asTarget = all<{ other_id: number; other_name: string; cnt: number }>(
+    `SELECT r.student_id as other_id, s2.name as other_name, COUNT(*) as cnt
+     FROM record_relations rr
+     JOIN consult_records r ON r.id = rr.record_id
+     JOIN students s2 ON s2.id = r.student_id
+     WHERE rr.related_student_id = ? AND rr.related_type = '학생'
+     GROUP BY r.student_id`,
+    [studentId]
+  );
+  const merged = new Map<number, { studentId: number; name: string; count: number }>();
+  for (const row of [...asAuthor, ...asTarget]) {
+    const cur = merged.get(row.other_id);
+    if (cur) cur.count += Number(row.cnt);
+    else merged.set(row.other_id, { studentId: row.other_id, name: row.other_name, count: Number(row.cnt) });
+  }
+  const students = Array.from(merged.values()).sort((a, b) => b.count - a.count);
+
+  const others = all<{ related_type: string; cnt: number }>(
+    `SELECT rr.related_type, COUNT(*) as cnt
+     FROM record_relations rr
+     JOIN consult_records r ON r.id = rr.record_id
+     WHERE r.student_id = ? AND rr.related_type != '학생'
+     GROUP BY rr.related_type`,
+    [studentId]
+  ).map((r) => ({ type: r.related_type, count: Number(r.cnt) }));
+
+  return { students, others };
 }
 
 // ---------- 통계 / 위기감지 ----------
