@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
 export function formatClassInfo(s: { grade: number | null; class_no: number | null; number: number | null }) {
   if (s.grade == null && s.class_no == null && s.number == null) return '-';
@@ -64,6 +68,10 @@ export interface ProfileFieldState {
   setGuardianName: (v: string) => void;
   guardianPhone: string;
   setGuardianPhone: (v: string) => void;
+  guardian2Name: string;
+  setGuardian2Name: (v: string) => void;
+  guardian2Phone: string;
+  setGuardian2Phone: (v: string) => void;
   studentPhone: string;
   setStudentPhone: (v: string) => void;
   address: string;
@@ -79,12 +87,22 @@ export function ProfileFields(p: ProfileFieldState) {
     <>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
         <div style={{ flex: '1 1 140px' }}>
-          <label className="field-label">보호자</label>
+          <label className="field-label">보호자1</label>
           <input className="input" value={p.guardianName} onChange={(e) => p.setGuardianName(e.target.value)} />
         </div>
         <div style={{ flex: '1 1 140px' }}>
-          <label className="field-label">보호자 연락처</label>
+          <label className="field-label">보호자1 연락처</label>
           <input className="input" value={p.guardianPhone} onChange={(e) => p.setGuardianPhone(e.target.value)} placeholder="010-0000-0000" />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+        <div style={{ flex: '1 1 140px' }}>
+          <label className="field-label">보호자2</label>
+          <input className="input" value={p.guardian2Name} onChange={(e) => p.setGuardian2Name(e.target.value)} />
+        </div>
+        <div style={{ flex: '1 1 140px' }}>
+          <label className="field-label">보호자2 연락처</label>
+          <input className="input" value={p.guardian2Phone} onChange={(e) => p.setGuardian2Phone(e.target.value)} placeholder="010-0000-0000" />
         </div>
         <div style={{ flex: '1 1 140px' }}>
           <label className="field-label">학생 연락처</label>
@@ -110,6 +128,8 @@ export function ProfileFields(p: ProfileFieldState) {
 export function useProfileFieldState(student?: Partial<Student>): ProfileFieldState {
   const [guardianName, setGuardianName] = useState(student?.guardian_name ?? '');
   const [guardianPhone, setGuardianPhone] = useState(student?.guardian_phone ?? '');
+  const [guardian2Name, setGuardian2Name] = useState(student?.guardian2_name ?? '');
+  const [guardian2Phone, setGuardian2Phone] = useState(student?.guardian2_phone ?? '');
   const [studentPhone, setStudentPhone] = useState(student?.student_phone ?? '');
   const [address, setAddress] = useState(student?.address ?? '');
   const [healthNote, setHealthNote] = useState(student?.health_note ?? '');
@@ -119,6 +139,10 @@ export function useProfileFieldState(student?: Partial<Student>): ProfileFieldSt
     setGuardianName,
     guardianPhone,
     setGuardianPhone,
+    guardian2Name,
+    setGuardian2Name,
+    guardian2Phone,
+    setGuardian2Phone,
     studentPhone,
     setStudentPhone,
     address,
@@ -161,6 +185,56 @@ export function ScoreTrend({ records }: { records: ConsultRecord[] }) {
           <circle key={i} cx={x} cy={y} r={2.2} fill="var(--accent)" />
         ))}
       </svg>
+    </div>
+  );
+}
+
+// 1점(빨강, 갈등) ~ 5점(초록, 좋음) 색상 스케일
+function scoreColor(score: number) {
+  const colors = ['#eb5757', '#e0a13a', '#f2c94c', '#6fcf97', '#2f9e44'];
+  const idx = Math.max(0, Math.min(4, Math.round(score) - 1));
+  return colors[idx];
+}
+
+// 학생 상세의 '관계 현황'에서 기록된 관계 점수(1~5)를 막대그래프로 보여준다.
+export function RelationScoreChart({ summary }: { summary: StudentRelationSummary }) {
+  const entries = [
+    ...summary.students.filter((s) => s.avgScore != null).map((s) => ({ label: s.name, score: s.avgScore as number })),
+    ...summary.others.filter((o) => o.avgScore != null).map((o) => ({ label: o.type, score: o.avgScore as number }))
+  ].sort((a, b) => a.score - b.score);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div>
+      <div className="field-label">관계 점수 그래프</div>
+      <div style={{ height: Math.max(70, entries.length * 30) }}>
+        <Bar
+          data={{
+            labels: entries.map((e) => e.label),
+            datasets: [
+              {
+                data: entries.map((e) => e.score),
+                backgroundColor: entries.map((e) => scoreColor(e.score)),
+                borderRadius: 4,
+                barThickness: 16
+              }
+            ]
+          }}
+          options={{
+            indexAxis: 'y' as const,
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x}점` } }
+            },
+            scales: {
+              x: { min: 0, max: 5, ticks: { stepSize: 1 } },
+              y: { ticks: { font: { size: 11.5 } } }
+            }
+          }}
+        />
+      </div>
     </div>
   );
 }

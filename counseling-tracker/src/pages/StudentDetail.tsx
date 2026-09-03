@@ -6,6 +6,7 @@ import {
   InfoRow,
   MiniMetric,
   ProfileFields,
+  RelationScoreChart,
   ScoreTrend,
   StudentFormFields,
   formatClassInfo,
@@ -47,6 +48,8 @@ export default function StudentDetail() {
       setNumber(s.number != null ? String(s.number) : '');
       profile.setGuardianName(s.guardian_name ?? '');
       profile.setGuardianPhone(s.guardian_phone ?? '');
+      profile.setGuardian2Name(s.guardian2_name ?? '');
+      profile.setGuardian2Phone(s.guardian2_phone ?? '');
       profile.setStudentPhone(s.student_phone ?? '');
       profile.setAddress(s.address ?? '');
       profile.setHealthNote(s.health_note ?? '');
@@ -94,6 +97,8 @@ export default function StudentDetail() {
         number: number ? Number(number) : null,
         guardian_name: profile.guardianName || null,
         guardian_phone: profile.guardianPhone || null,
+        guardian2_name: profile.guardian2Name || null,
+        guardian2_phone: profile.guardian2Phone || null,
         student_phone: profile.studentPhone || null,
         address: profile.address || null,
         health_note: profile.healthNote || null,
@@ -214,7 +219,8 @@ export default function StudentDetail() {
             <div className="info-grid">
               <InfoRow label="학년도" value={student.school_year} />
               <InfoRow label="학년/반/번호" value={formatClassInfo(student) === '-' ? null : formatClassInfo(student)} />
-              <InfoRow label="보호자" value={[student.guardian_name, student.guardian_phone].filter(Boolean).join(' · ') || null} />
+              <InfoRow label="보호자1" value={[student.guardian_name, student.guardian_phone].filter(Boolean).join(' · ') || null} />
+              <InfoRow label="보호자2" value={[student.guardian2_name, student.guardian2_phone].filter(Boolean).join(' · ') || null} />
               <InfoRow label="학생 연락처" value={student.student_phone} />
               <InfoRow label="주소" value={student.address} />
               <InfoRow label="특이사항" value={student.health_note} tone="danger" />
@@ -233,14 +239,17 @@ export default function StudentDetail() {
                       style={{ background: 'var(--bg-hover)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}
                       onClick={() => navigate(`/students/${s.studentId}`)}
                     >
-                      {s.name} {s.count}회
+                      {s.name} {s.count}회{s.avgScore != null && ` · ${s.avgScore}점`}
                     </button>
                   ))}
                   {relationSummary.others.map((o) => (
                     <span key={o.type} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
-                      {o.type} {o.count}회
+                      {o.type} {o.count}회{o.avgScore != null && ` · ${o.avgScore}점`}
                     </span>
                   ))}
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <RelationScoreChart summary={relationSummary} />
                 </div>
               </div>
             )}

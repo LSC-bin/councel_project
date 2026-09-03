@@ -117,6 +117,8 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
         number: number ? Number(number) : null,
         guardian_name: profile.guardianName || null,
         guardian_phone: profile.guardianPhone || null,
+        guardian2_name: profile.guardian2Name || null,
+        guardian2_phone: profile.guardian2Phone || null,
         student_phone: profile.studentPhone || null,
         address: profile.address || null,
         health_note: profile.healthNote || null,

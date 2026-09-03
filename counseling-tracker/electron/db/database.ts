@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS students (
     number INTEGER,
     guardian_name TEXT,
     guardian_phone TEXT,
+    guardian2_name TEXT,
+    guardian2_phone TEXT,
     student_phone TEXT,
     address TEXT,
     health_note TEXT,
@@ -113,7 +115,9 @@ CREATE TABLE IF NOT EXISTS record_relations (
     record_id INTEGER REFERENCES consult_records(id),
     related_type TEXT NOT NULL,
     related_student_id INTEGER REFERENCES students(id),
-    related_label TEXT
+    related_label TEXT,
+    relation_score INTEGER,
+    note TEXT
 );
 `;
 
@@ -148,20 +152,25 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
 
 // 이전 버전에서 만들어진 DB에 새 컬럼을 안전하게 추가한다(이미 있으면 건너뜀).
 function migrateSchema() {
-  const columns = all<{ name: string }>('PRAGMA table_info(students)').map((c) => c.name);
-  const addColumn = (name: string, type: string) => {
-    if (!columns.includes(name)) db.run(`ALTER TABLE students ADD COLUMN ${name} ${type}`);
+  const addColumnTo = (table: string, name: string, type: string) => {
+    const columns = all<{ name: string }>(`PRAGMA table_info(${table})`).map((c) => c.name);
+    if (!columns.includes(name)) db.run(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
   };
+  const addColumn = (name: string, type: string) => addColumnTo('students', name, type);
   addColumn('school_year', 'TEXT');
   addColumn('grade', 'INTEGER');
   addColumn('class_no', 'INTEGER');
   addColumn('number', 'INTEGER');
   addColumn('guardian_name', 'TEXT');
   addColumn('guardian_phone', 'TEXT');
+  addColumn('guardian2_name', 'TEXT');
+  addColumn('guardian2_phone', 'TEXT');
   addColumn('student_phone', 'TEXT');
   addColumn('address', 'TEXT');
   addColumn('health_note', 'TEXT');
   addColumn('memo', 'TEXT');
+  addColumnTo('record_relations', 'relation_score', 'INTEGER');
+  addColumnTo('record_relations', 'note', 'TEXT');
 
   // 예전 방식(기록에 딸린 next_appointment)으로 저장된 예약을 새 appointments 테이블로 1회성 이관.
   // 이미 이관된 기록(record_id로 연결된 예약이 있는 경우)은 건너뛴다.
@@ -279,6 +288,8 @@ export interface NewStudent {
   number?: number | null;
   guardian_name?: string | null;
   guardian_phone?: string | null;
+  guardian2_name?: string | null;
+  guardian2_phone?: string | null;
   student_phone?: string | null;
   address?: string | null;
   health_note?: string | null;
@@ -288,8 +299,8 @@ export interface NewStudent {
 export function addStudent(input: NewStudent) {
   db.run(
     `INSERT INTO students
-      (name, school_year, grade, class_no, number, guardian_name, guardian_phone, student_phone, address, health_note, memo, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      (name, school_year, grade, class_no, number, guardian_name, guardian_phone, guardian2_name, guardian2_phone, student_phone, address, health_note, memo, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
     [
       input.name,
       input.school_year ?? null,
@@ -298,6 +309,8 @@ export function addStudent(input: NewStudent) {
       input.number ?? null,
       input.guardian_name ?? null,
       input.guardian_phone ?? null,
+      input.guardian2_name ?? null,
+      input.guardian2_phone ?? null,
       input.student_phone ?? null,
       input.address ?? null,
       input.health_note ?? null,
@@ -479,6 +492,8 @@ export interface RecordRelationInput {
   related_type: '학생' | '보호자' | '교사' | '기타';
   related_student_id?: number | null;
   related_label?: string | null;
+  relation_score?: number | null;
+  note?: string | null;
 }
 
 export function getRecordRelations(recordId: number) {
@@ -496,21 +511,23 @@ export function getRecordRelations(recordId: number) {
 export function setRecordRelations(recordId: number, relations: RecordRelationInput[]) {
   db.run('DELETE FROM record_relations WHERE record_id = ?', [recordId]);
   for (const r of relations) {
-    db.run('INSERT INTO record_relations (record_id, related_type, related_student_id, related_label) VALUES (?, ?, ?, ?)', [
-      recordId,
-      r.related_type,
-      r.related_student_id ?? null,
-      r.related_label ?? null
-    ]);
+    db.run(
+      'INSERT INTO record_relations (record_id, related_type, related_student_id, related_label, relation_score, note) VALUES (?, ?, ?, ?, ?, ?)',
+      [recordId, r.related_type, r.related_student_id ?? null, r.related_label ?? null, r.relation_score ?? null, r.note ?? null]
+    );
   }
   persist();
   return getRecordRelations(recordId);
 }
 
 // 특정 학생과 관련된 관계 현황: 이 학생이 작성 주체인 기록에서 언급한 상대 + 다른 학생 기록에서 이 학생이 상대로 언급된 경우를 합산.
+// 관계 점수(1~5)는 양방향에서 매겨진 값을 모두 모아 평균을 낸다.
 export function getStudentRelationSummary(studentId: number) {
-  const asAuthor = all<{ other_id: number; other_name: string; cnt: number }>(
-    `SELECT rr.related_student_id as other_id, s2.name as other_name, COUNT(*) as cnt
+  type Row = { other_id: number; other_name: string; cnt: number; score_sum: number; score_cnt: number };
+  const asAuthor = all<Row>(
+    `SELECT rr.related_student_id as other_id, s2.name as other_name, COUNT(*) as cnt,
+            SUM(COALESCE(rr.relation_score, 0)) as score_sum,
+            SUM(CASE WHEN rr.relation_score IS NOT NULL THEN 1 ELSE 0 END) as score_cnt
      FROM record_relations rr
      JOIN consult_records r ON r.id = rr.record_id
      JOIN students s2 ON s2.id = rr.related_student_id
@@ -518,8 +535,10 @@ export function getStudentRelationSummary(studentId: number) {
      GROUP BY rr.related_student_id`,
     [studentId]
   );
-  const asTarget = all<{ other_id: number; other_name: string; cnt: number }>(
-    `SELECT r.student_id as other_id, s2.name as other_name, COUNT(*) as cnt
+  const asTarget = all<Row>(
+    `SELECT r.student_id as other_id, s2.name as other_name, COUNT(*) as cnt,
+            SUM(COALESCE(rr.relation_score, 0)) as score_sum,
+            SUM(CASE WHEN rr.relation_score IS NOT NULL THEN 1 ELSE 0 END) as score_cnt
      FROM record_relations rr
      JOIN consult_records r ON r.id = rr.record_id
      JOIN students s2 ON s2.id = r.student_id
@@ -527,22 +546,46 @@ export function getStudentRelationSummary(studentId: number) {
      GROUP BY r.student_id`,
     [studentId]
   );
-  const merged = new Map<number, { studentId: number; name: string; count: number }>();
+  const merged = new Map<number, { studentId: number; name: string; count: number; scoreSum: number; scoreCnt: number }>();
   for (const row of [...asAuthor, ...asTarget]) {
     const cur = merged.get(row.other_id);
-    if (cur) cur.count += Number(row.cnt);
-    else merged.set(row.other_id, { studentId: row.other_id, name: row.other_name, count: Number(row.cnt) });
+    if (cur) {
+      cur.count += Number(row.cnt);
+      cur.scoreSum += Number(row.score_sum);
+      cur.scoreCnt += Number(row.score_cnt);
+    } else {
+      merged.set(row.other_id, {
+        studentId: row.other_id,
+        name: row.other_name,
+        count: Number(row.cnt),
+        scoreSum: Number(row.score_sum),
+        scoreCnt: Number(row.score_cnt)
+      });
+    }
   }
-  const students = Array.from(merged.values()).sort((a, b) => b.count - a.count);
+  const students = Array.from(merged.values())
+    .map((s) => ({
+      studentId: s.studentId,
+      name: s.name,
+      count: s.count,
+      avgScore: s.scoreCnt > 0 ? Math.round((s.scoreSum / s.scoreCnt) * 10) / 10 : null
+    }))
+    .sort((a, b) => b.count - a.count);
 
-  const others = all<{ related_type: string; cnt: number }>(
-    `SELECT rr.related_type, COUNT(*) as cnt
+  const others = all<{ related_type: string; cnt: number; score_sum: number; score_cnt: number }>(
+    `SELECT rr.related_type, COUNT(*) as cnt,
+            SUM(COALESCE(rr.relation_score, 0)) as score_sum,
+            SUM(CASE WHEN rr.relation_score IS NOT NULL THEN 1 ELSE 0 END) as score_cnt
      FROM record_relations rr
      JOIN consult_records r ON r.id = rr.record_id
      WHERE r.student_id = ? AND rr.related_type != '학생'
      GROUP BY rr.related_type`,
     [studentId]
-  ).map((r) => ({ type: r.related_type, count: Number(r.cnt) }));
+  ).map((r) => ({
+    type: r.related_type,
+    count: Number(r.cnt),
+    avgScore: Number(r.score_cnt) > 0 ? Math.round((Number(r.score_sum) / Number(r.score_cnt)) * 10) / 10 : null
+  }));
 
   return { students, others };
 }

@@ -19,6 +19,8 @@ export function RelationEditor({
   const [query, setQuery] = useState('');
   const [pickedStudentId, setPickedStudentId] = useState<number | null>(null);
   const [label, setLabel] = useState('');
+  const [score, setScore] = useState<number | null>(null);
+  const [note, setNote] = useState('');
 
   useEffect(() => {
     if (adding && type === '학생' && students.length === 0) {
@@ -34,6 +36,8 @@ export function RelationEditor({
     setQuery('');
     setPickedStudentId(null);
     setLabel('');
+    setScore(null);
+    setNote('');
   }
 
   function handleAdd() {
@@ -41,10 +45,10 @@ export function RelationEditor({
       if (!pickedStudentId) return;
       const student = students.find((s) => s.id === pickedStudentId);
       if (!student) return;
-      setRelations([...relations, { related_type: '학생', related_student_id: pickedStudentId }]);
+      setRelations([...relations, { related_type: '학생', related_student_id: pickedStudentId, relation_score: score, note: note.trim() || null }]);
     } else {
       if (!label.trim()) return;
-      setRelations([...relations, { related_type: type, related_label: label.trim() }]);
+      setRelations([...relations, { related_type: type, related_label: label.trim(), relation_score: score, note: note.trim() || null }]);
     }
     resetForm();
   }
@@ -76,6 +80,7 @@ export function RelationEditor({
           {relations.map((r, i) => (
             <span key={i} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
               {r.related_type} · {describe(r)}
+              {r.relation_score != null && ` · ${r.relation_score}점`}
               <button
                 type="button"
                 onClick={() => handleRemove(i)}
@@ -145,6 +150,32 @@ export function RelationEditor({
           ) : (
             <input className="input" placeholder={`${type} 설명 (예: 3반 담임교사)`} value={label} onChange={(e) => setLabel(e.target.value)} />
           )}
+
+          <div style={{ marginTop: 8 }}>
+            <label className="field-label">관계 점수 (1~5, 선택)</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className="btn"
+                  style={
+                    score === n
+                      ? { background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)', flex: 1, justifyContent: 'center' }
+                      : { flex: 1, justifyContent: 'center' }
+                  }
+                  onClick={() => setScore(score === n ? null : n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 8 }}>
+            <label className="field-label">비고</label>
+            <input className="input" placeholder="관계 수준 등 자유롭게 기록" value={note} onChange={(e) => setNote(e.target.value)} />
+          </div>
 
           <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
             <button type="button" className="btn btn-primary" style={{ fontSize: 12.5 }} onClick={handleAdd}>

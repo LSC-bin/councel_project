@@ -32,6 +32,8 @@ interface Student {
   number: number | null;
   guardian_name: string | null;
   guardian_phone: string | null;
+  guardian2_name: string | null;
+  guardian2_phone: string | null;
   student_phone: string | null;
   address: string | null;
   health_note: string | null;
@@ -62,6 +64,8 @@ interface NewStudent {
   number?: number | null;
   guardian_name?: string | null;
   guardian_phone?: string | null;
+  guardian2_name?: string | null;
+  guardian2_phone?: string | null;
   student_phone?: string | null;
   address?: string | null;
   health_note?: string | null;
@@ -121,6 +125,8 @@ interface RecordRelation {
   related_type: RelatedType;
   related_student_id: number | null;
   related_label: string | null;
+  relation_score: number | null;
+  note: string | null;
   related_student_name: string | null;
 }
 
@@ -128,11 +134,13 @@ interface RecordRelationInput {
   related_type: RelatedType;
   related_student_id?: number | null;
   related_label?: string | null;
+  relation_score?: number | null;
+  note?: string | null;
 }
 
 interface StudentRelationSummary {
-  students: { studentId: number; name: string; count: number }[];
-  others: { type: string; count: number }[];
+  students: { studentId: number; name: string; count: number; avgScore: number | null }[];
+  others: { type: string; count: number; avgScore: number | null }[];
 }
 
 interface Appointment {
