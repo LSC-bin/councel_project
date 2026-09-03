@@ -239,12 +239,12 @@ export default function StudentDetail() {
                       style={{ background: 'var(--bg-hover)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}
                       onClick={() => navigate(`/students/${s.studentId}`)}
                     >
-                      {s.name} {s.count}회{s.avgScore != null && ` · ${s.avgScore}점`}
+                      {s.name} {s.count}회{s.latestScore != null && ` · 최근 ${s.latestScore}점`}
                     </button>
                   ))}
                   {relationSummary.others.map((o) => (
                     <span key={o.type} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
-                      {o.type} {o.count}회{o.avgScore != null && ` · ${o.avgScore}점`}
+                      {o.type} {o.count}회{o.latestScore != null && ` · 최근 ${o.latestScore}점`}
                     </span>
                   ))}
                 </div>

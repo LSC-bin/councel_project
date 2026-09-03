@@ -522,69 +522,68 @@ export function setRecordRelations(recordId: number, relations: RecordRelationIn
 
 // 특정 학생과 관련된 관계 현황: 이 학생이 작성 주체인 기록에서 언급한 상대 + 다른 학생 기록에서 이 학생이 상대로 언급된 경우를 합산.
 // 관계 점수(1~5)는 양방향에서 매겨진 값을 모두 모아 평균을 낸다.
+// 점수 이력(날짜순 score 배열)으로부터 평균/최근값/범위를 계산한다.
+// - avgScore: 참고용 전체 평균
+// - latestScore: 가장 최근 기록의 점수 — "지금 상태"를 대표하는 값으로 그래프에는 이 값을 쓴다(오래된 점수에 묻히지 않도록)
+// - minScore/maxScore: 기록마다 점수가 크게 엇갈리는지(예: 서로 다른 기록에서 5점/1점처럼 시각이 다른 경우) 판단하는 용도
+function summarizeScores(rows: { score: number | null; date: string }[]) {
+  const scored = rows
+    .filter((r): r is { score: number; date: string } => r.score != null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (scored.length === 0) {
+    return { avgScore: null as number | null, latestScore: null as number | null, minScore: null as number | null, maxScore: null as number | null };
+  }
+  const values = scored.map((s) => s.score);
+  const avgScore = Math.round((values.reduce((sum, v) => sum + v, 0) / values.length) * 10) / 10;
+  const latestScore = scored[scored.length - 1].score;
+  return { avgScore, latestScore, minScore: Math.min(...values), maxScore: Math.max(...values) };
+}
+
 export function getStudentRelationSummary(studentId: number) {
-  type Row = { other_id: number; other_name: string; cnt: number; score_sum: number; score_cnt: number };
+  type Row = { other_id: number; other_name: string; score: number | null; record_date: string };
   const asAuthor = all<Row>(
-    `SELECT rr.related_student_id as other_id, s2.name as other_name, COUNT(*) as cnt,
-            SUM(COALESCE(rr.relation_score, 0)) as score_sum,
-            SUM(CASE WHEN rr.relation_score IS NOT NULL THEN 1 ELSE 0 END) as score_cnt
+    `SELECT rr.related_student_id as other_id, s2.name as other_name, rr.relation_score as score, r.record_date
      FROM record_relations rr
      JOIN consult_records r ON r.id = rr.record_id
      JOIN students s2 ON s2.id = rr.related_student_id
-     WHERE r.student_id = ? AND rr.related_type = '학생'
-     GROUP BY rr.related_student_id`,
+     WHERE r.student_id = ? AND rr.related_type = '학생'`,
     [studentId]
   );
   const asTarget = all<Row>(
-    `SELECT r.student_id as other_id, s2.name as other_name, COUNT(*) as cnt,
-            SUM(COALESCE(rr.relation_score, 0)) as score_sum,
-            SUM(CASE WHEN rr.relation_score IS NOT NULL THEN 1 ELSE 0 END) as score_cnt
+    `SELECT r.student_id as other_id, s2.name as other_name, rr.relation_score as score, r.record_date
      FROM record_relations rr
      JOIN consult_records r ON r.id = rr.record_id
      JOIN students s2 ON s2.id = r.student_id
-     WHERE rr.related_student_id = ? AND rr.related_type = '학생'
-     GROUP BY r.student_id`,
+     WHERE rr.related_student_id = ? AND rr.related_type = '학생'`,
     [studentId]
   );
-  const merged = new Map<number, { studentId: number; name: string; count: number; scoreSum: number; scoreCnt: number }>();
+  const grouped = new Map<number, { name: string; rows: { score: number | null; date: string }[] }>();
   for (const row of [...asAuthor, ...asTarget]) {
-    const cur = merged.get(row.other_id);
-    if (cur) {
-      cur.count += Number(row.cnt);
-      cur.scoreSum += Number(row.score_sum);
-      cur.scoreCnt += Number(row.score_cnt);
-    } else {
-      merged.set(row.other_id, {
-        studentId: row.other_id,
-        name: row.other_name,
-        count: Number(row.cnt),
-        scoreSum: Number(row.score_sum),
-        scoreCnt: Number(row.score_cnt)
-      });
-    }
+    const g = grouped.get(row.other_id) ?? { name: row.other_name, rows: [] };
+    g.rows.push({ score: row.score, date: row.record_date });
+    grouped.set(row.other_id, g);
   }
-  const students = Array.from(merged.values())
-    .map((s) => ({
-      studentId: s.studentId,
-      name: s.name,
-      count: s.count,
-      avgScore: s.scoreCnt > 0 ? Math.round((s.scoreSum / s.scoreCnt) * 10) / 10 : null
-    }))
+  const students = Array.from(grouped.entries())
+    .map(([id, g]) => ({ studentId: id, name: g.name, count: g.rows.length, ...summarizeScores(g.rows) }))
     .sort((a, b) => b.count - a.count);
 
-  const others = all<{ related_type: string; cnt: number; score_sum: number; score_cnt: number }>(
-    `SELECT rr.related_type, COUNT(*) as cnt,
-            SUM(COALESCE(rr.relation_score, 0)) as score_sum,
-            SUM(CASE WHEN rr.relation_score IS NOT NULL THEN 1 ELSE 0 END) as score_cnt
+  const otherRows = all<{ related_type: string; score: number | null; record_date: string }>(
+    `SELECT rr.related_type, rr.relation_score as score, r.record_date
      FROM record_relations rr
      JOIN consult_records r ON r.id = rr.record_id
-     WHERE r.student_id = ? AND rr.related_type != '학생'
-     GROUP BY rr.related_type`,
+     WHERE r.student_id = ? AND rr.related_type != '학생'`,
     [studentId]
-  ).map((r) => ({
-    type: r.related_type,
-    count: Number(r.cnt),
-    avgScore: Number(r.score_cnt) > 0 ? Math.round((Number(r.score_sum) / Number(r.score_cnt)) * 10) / 10 : null
+  );
+  const groupedOthers = new Map<string, { score: number | null; date: string }[]>();
+  for (const row of otherRows) {
+    const list = groupedOthers.get(row.related_type) ?? [];
+    list.push({ score: row.score, date: row.record_date });
+    groupedOthers.set(row.related_type, list);
+  }
+  const others = Array.from(groupedOthers.entries()).map(([type, rows]) => ({
+    type,
+    count: rows.length,
+    ...summarizeScores(rows)
   }));
 
   return { students, others };

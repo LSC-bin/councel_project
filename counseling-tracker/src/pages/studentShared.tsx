@@ -197,25 +197,28 @@ function scoreColor(score: number) {
 }
 
 // 학생 상세의 '관계 현황'에서 기록된 관계 점수(1~5)를 막대그래프로 보여준다.
+// - 막대 길이는 "최근 점수"(가장 최근 기록 기준) — 오래된 점수까지 평균 내면 지금 상태가 묻히므로 최신값을 대표값으로 쓴다.
+// - 기록마다 점수가 2점 이상 엇갈리면(서로 다른 기록에서 평가가 다르면) 라벨에 ⚠ 표시로 알려준다.
+// - 평균·건수·범위는 막대에 마우스를 올리면 툴팁으로 확인 가능.
 export function RelationScoreChart({ summary }: { summary: StudentRelationSummary }) {
   const entries = [
-    ...summary.students.filter((s) => s.avgScore != null).map((s) => ({ label: s.name, score: s.avgScore as number })),
-    ...summary.others.filter((o) => o.avgScore != null).map((o) => ({ label: o.type, score: o.avgScore as number }))
-  ].sort((a, b) => a.score - b.score);
+    ...summary.students.filter((s) => s.latestScore != null).map((s) => ({ label: s.name, ...s })),
+    ...summary.others.filter((o) => o.latestScore != null).map((o) => ({ label: o.type, ...o }))
+  ].sort((a, b) => (a.latestScore as number) - (b.latestScore as number));
 
   if (entries.length === 0) return null;
 
   return (
     <div>
-      <div className="field-label">관계 점수 그래프</div>
+      <div className="field-label">관계 점수 그래프 (최근 기록 기준)</div>
       <div style={{ height: 36 + entries.length * 34 }}>
         <Bar
           data={{
-            labels: entries.map((e) => e.label),
+            labels: entries.map((e) => (e.maxScore! - e.minScore! >= 2 ? `⚠ ${e.label}` : e.label)),
             datasets: [
               {
-                data: entries.map((e) => e.score),
-                backgroundColor: entries.map((e) => scoreColor(e.score)),
+                data: entries.map((e) => e.latestScore as number),
+                backgroundColor: entries.map((e) => scoreColor(e.latestScore as number)),
                 borderRadius: 4,
                 maxBarThickness: 18,
                 categoryPercentage: 0.6,
@@ -229,7 +232,15 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
             maintainAspectRatio: false,
             plugins: {
               legend: { display: false },
-              tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x}점` } }
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const e = entries[ctx.dataIndex];
+                    const range = e.maxScore !== e.minScore ? ` (범위 ${e.minScore}~${e.maxScore})` : '';
+                    return [`최근 ${e.latestScore}점${range}`, `전체 평균 ${e.avgScore}점 · ${e.count}건`];
+                  }
+                }
+              }
             },
             scales: {
               x: { min: 0, max: 5, ticks: { stepSize: 1 } },
@@ -238,6 +249,9 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
           }}
         />
       </div>
+      <p style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 4, marginBottom: 0 }}>
+        막대는 가장 최근 기록의 점수입니다. ⚠ 표시는 기록마다 점수가 크게 엇갈린 경우입니다.
+      </p>
     </div>
   );
 }

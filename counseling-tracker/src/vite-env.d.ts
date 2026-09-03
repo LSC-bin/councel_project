@@ -138,9 +138,17 @@ interface RecordRelationInput {
   note?: string | null;
 }
 
+interface RelationScoreStats {
+  count: number;
+  avgScore: number | null;
+  latestScore: number | null;
+  minScore: number | null;
+  maxScore: number | null;
+}
+
 interface StudentRelationSummary {
-  students: { studentId: number; name: string; count: number; avgScore: number | null }[];
-  others: { type: string; count: number; avgScore: number | null }[];
+  students: ({ studentId: number; name: string } & RelationScoreStats)[];
+  others: ({ type: string } & RelationScoreStats)[];
 }
 
 interface Appointment {
