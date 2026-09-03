@@ -171,11 +171,11 @@ export default function StudentDetail() {
           <button className="btn" onClick={() => navigate('/', { state: { studentId: student.id, studentName: student.name } })}>
             📅 예약 잡기
           </button>
-          <button className="btn" onClick={() => setEditing(true)}>
-            정보 수정
+          <button className="btn-icon" title="정보 수정" onClick={() => setEditing(true)}>
+            ✎
           </button>
-          <button className="btn" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDelete}>
-            삭제
+          <button className="btn-icon btn-icon-danger" title="삭제" onClick={handleDelete}>
+            🗑
           </button>
         </div>
       ) : (
@@ -201,8 +201,8 @@ export default function StudentDetail() {
             <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleSave}>
               저장
             </button>
-            <button className="btn" onClick={() => setEditing(false)}>
-              취소
+            <button className="btn-icon" title="취소" onClick={() => setEditing(false)}>
+              ✕
             </button>
           </div>
         </div>

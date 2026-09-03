@@ -150,8 +150,8 @@ export function RelationEditor({
             <button type="button" className="btn btn-primary" style={{ fontSize: 12.5 }} onClick={handleAdd}>
               추가
             </button>
-            <button type="button" className="btn" style={{ fontSize: 12.5 }} onClick={resetForm}>
-              취소
+            <button type="button" className="btn-icon" title="취소" onClick={resetForm}>
+              ✕
             </button>
           </div>
         </div>

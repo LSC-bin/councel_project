@@ -148,14 +148,15 @@ export default function RecordInput() {
                   <span style={{ fontWeight: 500, fontSize: 13.5 }}>{selectedStudent.name}</span>
                   <button
                     type="button"
-                    className="btn"
-                    style={{ marginLeft: 'auto', padding: '2px 8px', fontSize: 12 }}
+                    className="btn-icon"
+                    style={{ marginLeft: 'auto' }}
+                    title="다른 학생 선택"
                     onClick={() => {
                       setStudentId(null);
                       setStudentQuery('');
                     }}
                   >
-                    변경
+                    ✕
                   </button>
                 </div>
               ) : (

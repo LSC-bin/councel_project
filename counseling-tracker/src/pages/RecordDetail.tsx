@@ -156,8 +156,8 @@ export default function RecordDetail() {
               >
                 📅 예약 잡기
               </button>
-              <button className="btn" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDelete}>
-                삭제
+              <button className="btn-icon btn-icon-danger" title="삭제" onClick={handleDelete}>
+                🗑
               </button>
             </div>
           </>
@@ -232,8 +232,8 @@ export default function RecordDetail() {
               <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
                 {saving ? '저장 중…' : '저장'}
               </button>
-              <button className="btn" onClick={() => setEditing(false)}>
-                취소
+              <button className="btn-icon" title="취소" onClick={() => setEditing(false)}>
+                ✕
               </button>
             </div>
           </>

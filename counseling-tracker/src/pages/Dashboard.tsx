@@ -93,12 +93,7 @@ export default function Dashboard() {
             <h2 className="section-title" style={{ margin: 0 }}>
               최근 기록
             </h2>
-            <button
-              className="btn"
-              style={{ padding: '2px 10px', fontSize: 12.5 }}
-              onClick={() => navigate('/search')}
-              title="조회·검색으로 이동"
-            >
+            <button className="btn-icon" onClick={() => navigate('/search')} title="조회·검색으로 이동">
               +
             </button>
           </div>

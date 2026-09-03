@@ -148,8 +148,8 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
         <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleAdd}>
           추가
         </button>
-        <button className="btn" onClick={onCancel}>
-          취소
+        <button className="btn-icon" title="취소" onClick={onCancel}>
+          ✕
         </button>
       </div>
       <button

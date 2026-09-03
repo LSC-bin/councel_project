@@ -22,7 +22,7 @@ export default function Modal({ title, onClose, children, maxWidth = 420 }: Prop
       <div className="modal-card" style={{ maxWidth }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ fontWeight: 600, fontSize: 14.5 }}>{title}</div>
-          <button className="btn" style={{ padding: '2px 8px' }} onClick={onClose}>
+          <button className="btn-icon" title="닫기" onClick={onClose}>
             ✕
           </button>
         </div>

@@ -172,12 +172,8 @@ function RecordTypeSettings() {
                       />
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button
-                        className="btn"
-                        style={{ padding: '3px 8px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                        onClick={() => handleDeleteType(t.id)}
-                      >
-                        삭제
+                      <button className="btn-icon btn-icon-danger" title="삭제" onClick={() => handleDeleteType(t.id)}>
+                        🗑
                       </button>
                     </td>
                   </tr>
@@ -219,8 +215,8 @@ function RecordTypeSettings() {
                   templates.map((tpl) => (
                     <div key={tpl.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}>
                       <span>{tpl.text}</span>
-                      <button className="btn" style={{ padding: '2px 8px', flexShrink: 0 }} onClick={() => handleDeleteTemplate(tpl.id)}>
-                        삭제
+                      <button className="btn-icon btn-icon-danger" title="삭제" onClick={() => handleDeleteTemplate(tpl.id)}>
+                        🗑
                       </button>
                     </div>
                   ))

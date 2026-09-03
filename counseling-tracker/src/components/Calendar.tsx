@@ -123,7 +123,7 @@ export default function Calendar({ prefillStudentId, prefillStudentName, onPrefi
         ))}
       </div>
 
-      <div className="calendar-grid">
+      <div className="calendar-days">
         {grid.map((d) => {
           const iso = toISODate(d);
           const inMonth = d.getMonth() === viewMonth.getMonth();
@@ -287,8 +287,8 @@ function AppointmentRow({ appointment, onChanged }: { appointment: Appointment; 
           <button className="btn btn-primary" style={{ fontSize: 12.5 }} disabled={saving || conflicts.length > 0} onClick={handleSave}>
             {saving ? '저장 중…' : '저장'}
           </button>
-          <button className="btn" style={{ fontSize: 12.5 }} onClick={() => setEditing(false)}>
-            취소
+          <button className="btn-icon" title="취소" onClick={() => setEditing(false)}>
+            ✕
           </button>
         </div>
       </div>
@@ -296,19 +296,19 @@ function AppointmentRow({ appointment, onChanged }: { appointment: Appointment; 
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4, fontSize: 13 }}>
       <div>
         <div style={{ fontWeight: 500 }}>
           {appointment.start_time}–{appointment.end_time} · {appointment.student_name}
         </div>
         {appointment.note && <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{appointment.note}</div>}
       </div>
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-        <button className="btn" style={{ padding: '2px 8px' }} onClick={() => setEditing(true)}>
-          수정
+      <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+        <button className="btn-icon" title="수정" onClick={() => setEditing(true)}>
+          ✎
         </button>
-        <button className="btn" style={{ padding: '2px 8px' }} onClick={handleDelete}>
-          삭제
+        <button className="btn-icon btn-icon-danger" title="삭제" onClick={handleDelete}>
+          🗑
         </button>
       </div>
     </div>
