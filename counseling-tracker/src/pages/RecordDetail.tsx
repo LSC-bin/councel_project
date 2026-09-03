@@ -28,7 +28,15 @@ export default function RecordDetail() {
   function loadRelations() {
     window.api.getRecordRelations(recordId).then((rows) => {
       setSavedRelations(rows);
-      setRelations(rows.map((r) => ({ related_type: r.related_type, related_student_id: r.related_student_id, related_label: r.related_label })));
+      setRelations(
+        rows.map((r) => ({
+          related_type: r.related_type,
+          related_student_id: r.related_student_id,
+          related_label: r.related_label,
+          relation_score: r.relation_score,
+          note: r.note
+        }))
+      );
     });
   }
 
