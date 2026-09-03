@@ -12,6 +12,7 @@ import {
   formatClassInfo,
   useProfileFieldState
 } from './studentShared';
+import { EditIcon, TrashIcon } from '../components/icons';
 
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -177,10 +178,10 @@ export default function StudentDetail() {
             📅 예약 잡기
           </button>
           <button className="btn-icon" title="정보 수정" onClick={() => setEditing(true)}>
-            ✎
+            <EditIcon />
           </button>
           <button className="btn-icon btn-icon-danger" title="삭제" onClick={handleDelete}>
-            🗑
+            <TrashIcon />
           </button>
         </div>
       ) : (
@@ -229,7 +230,7 @@ export default function StudentDetail() {
 
             {relationSummary && (relationSummary.students.length > 0 || relationSummary.others.length > 0) && (
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                <div className="field-label">관계 현황</div>
+                <div className="field-label">관계 현황 · {student.name} 학생이 남긴 기록 기준</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {relationSummary.students.map((s) => (
                     <button

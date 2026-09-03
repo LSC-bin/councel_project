@@ -210,7 +210,7 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
 
   return (
     <div>
-      <div className="field-label">관계 점수 그래프 (최근 기록 기준)</div>
+      <div className="field-label">관계 점수 그래프 · 이 학생이 상대를 어떻게 느꼈는지 (최근 기록 기준)</div>
       <div style={{ height: 36 + entries.length * 34 }}>
         <Bar
           data={{

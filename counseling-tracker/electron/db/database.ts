@@ -540,6 +540,9 @@ function summarizeScores(rows: { score: number | null; date: string }[]) {
 }
 
 export function getStudentRelationSummary(studentId: number) {
+  // "관계 현황"과 그래프는 이 학생을 상담한 기록(student_id = studentId)에 달린 관계만 사용한다.
+  // 즉 "이 학생이 다른 사람을 어떻게 생각/평가했는지"를 보여주는 공간이며,
+  // 반대로 다른 학생의 기록에서 이 학생이 언급된 경우(asTarget)는 그 다른 학생의 관점이므로 여기 섞지 않는다.
   type Row = { other_id: number; other_name: string; score: number | null; record_date: string };
   const asAuthor = all<Row>(
     `SELECT rr.related_student_id as other_id, s2.name as other_name, rr.relation_score as score, r.record_date
@@ -549,16 +552,8 @@ export function getStudentRelationSummary(studentId: number) {
      WHERE r.student_id = ? AND rr.related_type = '학생'`,
     [studentId]
   );
-  const asTarget = all<Row>(
-    `SELECT r.student_id as other_id, s2.name as other_name, rr.relation_score as score, r.record_date
-     FROM record_relations rr
-     JOIN consult_records r ON r.id = rr.record_id
-     JOIN students s2 ON s2.id = r.student_id
-     WHERE rr.related_student_id = ? AND rr.related_type = '학생'`,
-    [studentId]
-  );
   const grouped = new Map<number, { name: string; rows: { score: number | null; date: string }[] }>();
-  for (const row of [...asAuthor, ...asTarget]) {
+  for (const row of asAuthor) {
     const g = grouped.get(row.other_id) ?? { name: row.other_name, rows: [] };
     g.rows.push({ score: row.score, date: row.record_date });
     grouped.set(row.other_id, g);

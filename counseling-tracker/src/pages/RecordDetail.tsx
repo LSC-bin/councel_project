@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RelationEditor } from './recordShared';
+import { TrashIcon } from '../components/icons';
+import { Avatar, formatClassInfo } from './studentShared';
 
 const REFERRAL_OPTIONS = ['Wee클래스', '학폭담당', '보건교사', '학부모', '기타'];
 
@@ -10,6 +12,7 @@ export default function RecordDetail() {
   const navigate = useNavigate();
 
   const [record, setRecord] = useState<ConsultRecord | null>(null);
+  const [student, setStudent] = useState<Student | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [types, setTypes] = useState<ConsultType[]>([]);
   const [editing, setEditing] = useState(false);
@@ -54,6 +57,7 @@ export default function RecordDetail() {
       setFollowUpDone(!!r.follow_up_done);
       setReferredTo(r.referred_to ? r.referred_to.split(',').filter(Boolean) : []);
       setReflectedInNice(!!r.reflected_in_nice);
+      window.api.getStudentById(r.student_id).then((s) => setStudent(s ?? null));
     });
   }
 
@@ -122,36 +126,94 @@ export default function RecordDetail() {
         ←
       </button>
 
-      <div className="page-header">
-        <h1 className="page-title">{record.student_name}</h1>
-        <p className="page-subtitle">{record.record_date}</p>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Avatar name={record.student_name} size={40} />
+        <div>
+          <h1
+            className="page-title page-title-link"
+            onClick={() => navigate(`/students/${record.student_id}`)}
+            title="학생 프로필로 이동"
+          >
+            {record.student_name}
+          </h1>
+          <p className="page-subtitle">
+            {record.record_date}
+            {student && formatClassInfo(student) !== '-' && ` · ${formatClassInfo(student)}`}
+          </p>
+        </div>
       </div>
 
       <div className="card" style={{ maxWidth: 640 }}>
         {!editing ? (
           <>
-            <div className="field">
+            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className="badge" style={{ background: `${record.type_color}22`, color: record.type_color }}>
                 <span className="badge-dot" style={{ background: record.type_color }} />
                 {record.type_name}
               </span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>작성 {record.created_at?.slice(0, 16).replace('T', ' ')}</span>
             </div>
-            <div className="field" style={{ whiteSpace: 'pre-wrap', fontSize: 13.5 }}>
+            <div className="field" style={{ whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.55 }}>
               {record.content || <span style={{ color: 'var(--text-faint)' }}>내용 없음</span>}
             </div>
-            <div className="field" style={{ fontSize: 12.5, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {record.state_score != null && <div>상태 점수: {record.state_score}</div>}
-              {!!record.follow_up_needed && <div>후속조치: {record.follow_up_done ? '완료' : '대기'}</div>}
-              {record.referred_to && <div>유관기관 연계: {record.referred_to.split(',').join(', ')}</div>}
-              <div>생기부 반영: {record.reflected_in_nice ? '완료' : '미반영'}</div>
+            <div
+              className="field"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '8px 12px',
+                fontSize: 12.5,
+                background: 'var(--bg-hover)',
+                borderRadius: 8,
+                padding: '10px 12px'
+              }}
+            >
+              <div>
+                <span style={{ color: 'var(--text-faint)' }}>상태 점수 </span>
+                <strong>{record.state_score ?? '-'}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-faint)' }}>후속조치 </span>
+                <strong style={{ color: !record.follow_up_needed ? undefined : record.follow_up_done ? 'var(--success)' : 'var(--danger)' }}>
+                  {!record.follow_up_needed ? '불필요' : record.follow_up_done ? '완료' : '대기'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-faint)' }}>생기부 반영 </span>
+                <strong style={{ color: record.reflected_in_nice ? 'var(--success)' : 'var(--danger)' }}>
+                  {record.reflected_in_nice ? '완료' : '미반영'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-faint)' }}>유관기관 연계 </span>
+                <strong>{record.referred_to ? record.referred_to.split(',').join(', ') : '-'}</strong>
+              </div>
             </div>
             {savedRelations.length > 0 && (
-              <div className="field" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {savedRelations.map((r) => (
-                  <span key={r.id} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
-                    {r.related_type} · {r.related_type === '학생' ? r.related_student_name : r.related_label}
-                  </span>
-                ))}
+              <div className="field">
+                <label className="field-label">관련 대상</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {savedRelations.map((r) =>
+                    r.related_type === '학생' && r.related_student_id ? (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className="badge badge-link"
+                        style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}
+                        onClick={() => navigate(`/students/${r.related_student_id}`)}
+                        title="학생 프로필로 이동"
+                      >
+                        {r.related_type} · {r.related_student_name}
+                        {r.relation_score != null && ` · ${r.relation_score}점`}
+                      </button>
+                    ) : (
+                      <span key={r.id} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
+                        {r.related_type} · {r.related_label}
+                        {r.relation_score != null && ` · ${r.relation_score}점`}
+                      </span>
+                    )
+                  )}
+                </div>
               </div>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
@@ -165,7 +227,7 @@ export default function RecordDetail() {
                 📅 예약 잡기
               </button>
               <button className="btn-icon btn-icon-danger" title="삭제" onClick={handleDelete}>
-                🗑
+                <TrashIcon />
               </button>
             </div>
           </>

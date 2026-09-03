@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { TrashIcon } from '../components/icons';
 
 export default function Settings() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -173,7 +174,7 @@ function RecordTypeSettings() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <button className="btn-icon btn-icon-danger" title="삭제" onClick={() => handleDeleteType(t.id)}>
-                        🗑
+                        <TrashIcon />
                       </button>
                     </td>
                   </tr>
@@ -216,7 +217,7 @@ function RecordTypeSettings() {
                     <div key={tpl.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}>
                       <span>{tpl.text}</span>
                       <button className="btn-icon btn-icon-danger" title="삭제" onClick={() => handleDeleteTemplate(tpl.id)}>
-                        🗑
+                        <TrashIcon />
                       </button>
                     </div>
                   ))

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
+import { EditIcon, TrashIcon } from './icons';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -305,10 +306,10 @@ function AppointmentRow({ appointment, onChanged }: { appointment: Appointment; 
       </div>
       <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
         <button className="btn-icon" title="수정" onClick={() => setEditing(true)}>
-          ✎
+          <EditIcon />
         </button>
         <button className="btn-icon btn-icon-danger" title="삭제" onClick={handleDelete}>
-          🗑
+          <TrashIcon />
         </button>
       </div>
     </div>

@@ -156,6 +156,22 @@ button {
   margin: 0;
 }
 
+.page-title-link {
+  cursor: pointer;
+}
+.page-title-link:hover {
+  color: var(--accent);
+}
+
+.badge-link {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+.badge-link:hover {
+  filter: brightness(0.95);
+}
+
 /* ---------- Cards / grids ---------- */
 .card {
   background: var(--bg-card);
