@@ -50,14 +50,20 @@ button {
   font-family: inherit;
 }
 
-/* ---------- 앱 껍데기: 상단바 + 본문 ---------- */
+/* ---------- 앱 껍데기: 좌측 사이드바 + 우측 본문 ---------- */
 .app-shell {
   display: flex;
-  flex-direction: column;
   height: 100vh;
 }
 
-/* ---------- 상단 배너(밝은 파랑) ---------- */
+.main-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 상단 배너(밝은 파랑, 본문 상단 고정) ---------- */
 .top-banner {
   background: var(--banner-bg);
   border-bottom: 1px solid var(--border);
@@ -65,7 +71,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  -webkit-app-region: drag;
+  gap: 12px;
   flex-shrink: 0;
 }
 
@@ -74,71 +80,121 @@ button {
   font-weight: 700;
   color: var(--accent-strong);
   letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 .top-banner-sub {
   font-size: 11.5px;
   color: var(--text-secondary);
+  text-align: right;
+}
+
+/* ---------- 좌측 사이드바 (흰 배경, 직각) ---------- */
+.sidebar {
+  width: 176px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border-right: 2px solid var(--accent);
+  display: flex;
+  flex-direction: column;
+  -webkit-app-region: drag;
+}
+
+.sidebar-title {
+  padding: 10px 14px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  background: var(--banner-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 6px;
+  gap: 2px;
   -webkit-app-region: no-drag;
 }
 
-/* ---------- 흰 상단 내비게이션 바 ---------- */
-.top-nav {
-  background: var(--bg);
-  border-bottom: 2px solid var(--accent);
-  display: flex;
-  align-items: stretch;
-  padding: 0 12px;
-  flex-shrink: 0;
-}
-
-.top-nav-link {
+.sidebar-link {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 14px;
+  padding: 7px 10px;
+  border-left: 3px solid transparent;
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
   white-space: nowrap;
 }
 
-.top-nav-link:hover {
+.sidebar-link:hover {
   background: var(--bg-hover);
   color: var(--text);
 }
 
-.top-nav-link.active {
-  color: var(--accent-strong);
-  border-bottom-color: var(--accent-strong);
+.sidebar-link.active {
   background: var(--accent-bg);
+  border-left-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+  -webkit-app-region: no-drag;
 }
 
 /* ---------- 본문 ---------- */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 18px 28px;
+  padding: 12px 16px 24px;
   background: var(--bg-panel);
 }
 
 .page-header {
   margin-bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .page-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  margin: 0 0 2px;
+  margin: 0;
 }
 
 .page-subtitle {
   color: var(--text-secondary);
   font-size: 12.5px;
   margin: 0;
+}
+
+/* 뒤로가기 버튼: 제목과 같은 줄에 배치해 세로 공간을 아낀다 */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
 }
 
 .page-title-link {
@@ -576,8 +632,8 @@ label.field-label {
 }
 
 .calendar-cell {
-  min-height: 76px;
-  padding: 4px;
+  min-height: 62px;
+  padding: 3px;
   cursor: pointer;
   display: flex;
   flex-direction: column;

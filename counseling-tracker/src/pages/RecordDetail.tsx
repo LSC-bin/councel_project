@@ -114,9 +114,11 @@ export default function RecordDetail() {
   if (notFound) {
     return (
       <div>
-        <button className="btn-icon" title="목록으로" style={{ marginBottom: 12 }} onClick={() => navigate('/search')}>
-          ←
-        </button>
+        <div className="page-header">
+          <button className="back-btn" onClick={() => navigate('/search')}>
+            ← 조회·검색
+          </button>
+        </div>
         <div className="card empty-state">기록을 찾을 수 없습니다.</div>
       </div>
     );
@@ -128,12 +130,11 @@ export default function RecordDetail() {
 
   return (
     <div>
-      <button className="btn-icon" title="목록으로" style={{ marginBottom: 12 }} onClick={() => navigate('/search')}>
-        ←
-      </button>
-
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Avatar name={record.student_name} size={40} />
+      <div className="page-header" style={{ alignItems: 'center' }}>
+        <button className="back-btn" onClick={() => navigate('/search')}>
+          ← 조회·검색
+        </button>
+        <Avatar name={record.student_name} size={34} />
         <div>
           <h1
             className="page-title page-title-link"

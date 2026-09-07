@@ -93,86 +93,84 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="section">
-        <h2 className="section-title">예약 캘린더</h2>
-        <Calendar
-          prefillStudentId={prefill?.studentId ?? null}
-          prefillStudentName={prefill?.studentName ?? null}
-          onPrefillConsumed={() => setPrefill(null)}
-        />
-      </div>
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <div className="section" style={{ flex: '2 1 420px', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <h2 className="section-title" style={{ margin: 0 }}>
-              최근 기록
-            </h2>
-            <button className="btn-icon" onClick={() => navigate('/search')} title="조회·검색으로 이동">
-              +
-            </button>
-          </div>
-          <div className="card">
-            {loading ? (
-              <div className="empty-state">불러오는 중…</div>
-            ) : recent.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">✎</div>
-                <div>아직 등록된 기록이 없습니다.</div>
-                <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={() => navigate('/input')}>
-                  첫 기록 입력하기
-                </button>
-              </div>
-            ) : (
-              <table className="record-table">
-                <thead>
-                  <tr>
-                    <th>날짜</th>
-                    <th>학생</th>
-                    <th>유형</th>
-                    <th>내용</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recent.map((r) => (
-                    <tr key={r.id}>
-                      <td>{r.record_date}</td>
-                      <td>{r.student_name}</td>
-                      <td>
-                        <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color, border: `1px solid ${r.type_color}44` }}>
-                          {r.type_name}
-                        </span>
-                      </td>
-                      <td>{r.content?.slice(0, 40)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div className="section" style={{ flex: '3 1 560px', marginBottom: 12 }}>
+          <h2 className="section-title">예약 캘린더</h2>
+          <Calendar
+            prefillStudentId={prefill?.studentId ?? null}
+            prefillStudentName={prefill?.studentName ?? null}
+            onPrefillConsumed={() => setPrefill(null)}
+          />
         </div>
 
-        <div style={{ flex: '1 1 260px' }}>
-          <div className="section" style={{ marginBottom: 0 }}>
+        <div style={{ flex: '2 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <h2 className="section-title" style={{ margin: 0 }}>
+                최근 기록
+              </h2>
+              <button className="btn-icon" onClick={() => navigate('/search')} title="조회·검색으로 이동">
+                +
+              </button>
+            </div>
+            <div className="card" style={{ padding: 0 }}>
+              {loading ? (
+                <div className="empty-state">불러오는 중…</div>
+              ) : recent.length === 0 ? (
+                <div className="empty-state" style={{ padding: '20px 10px' }}>
+                  <div>아직 등록된 기록이 없습니다.</div>
+                  <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => navigate('/input')}>
+                    첫 기록 입력하기
+                  </button>
+                </div>
+              ) : (
+                <table className="record-table">
+                  <thead>
+                    <tr>
+                      <th>날짜</th>
+                      <th>학생</th>
+                      <th>유형</th>
+                      <th>내용</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.map((r) => (
+                      <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/search/${r.id}`)}>
+                        <td style={{ whiteSpace: 'nowrap' }}>{r.record_date.slice(5)}</td>
+                        <td>{r.student_name}</td>
+                        <td>
+                          <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color, border: `1px solid ${r.type_color}44` }}>
+                            {r.type_name}
+                          </span>
+                        </td>
+                        <td>{r.content?.slice(0, 24)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          <div>
             <h2 className="section-title">유형별 분포</h2>
             <div className="card">
               {loading || !stats || stats.byType.length === 0 ? (
-                <div className="empty-state" style={{ padding: '20px 10px' }}>
+                <div className="empty-state" style={{ padding: '16px 10px' }}>
                   데이터 없음
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {stats.byType.map((t) => (
                     <div key={t.type_name}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 3 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 2 }}>
                         <span>{t.type_name}</span>
                         <span style={{ color: 'var(--text-secondary)' }}>{t.count}</span>
                       </div>
-                      <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-hover)' }}>
+                      <div style={{ height: 5, background: 'var(--bg-hover)' }}>
                         <div
                           style={{
                             height: '100%',
-                            borderRadius: 3,
                             width: `${maxTypeCount ? (t.count / maxTypeCount) * 100 : 0}%`,
                             background: t.type_color
                           }}

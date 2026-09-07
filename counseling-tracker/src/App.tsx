@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
-import TopNav from './components/TopNav';
+import Sidebar from './components/Sidebar';
 import LockScreen from './components/LockScreen';
 import Dashboard from './pages/Dashboard';
 import RecordInput from './pages/RecordInput';
@@ -29,20 +29,26 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <TopNav />
-      <main className="content">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/input" element={<RecordInput />} />
-          <Route path="/search" element={<SearchView />} />
-          <Route path="/search/:id" element={<RecordDetail />} />
-          <Route path="/students" element={<StudentsView />} />
-          <Route path="/students/:id" element={<StudentDetail />} />
-          <Route path="/statistics" element={<Statistics />} />
-          <Route path="/report" element={<ReportExport />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </main>
+      <Sidebar />
+      <div className="main-area">
+        <div className="top-banner">
+          <span className="top-banner-title">학생 상담·생활지도 기록</span>
+          <span className="top-banner-sub">모든 기록은 이 PC에만 암호화 저장됩니다 · 외부 전송 없음</span>
+        </div>
+        <main className="content">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/input" element={<RecordInput />} />
+            <Route path="/search" element={<SearchView />} />
+            <Route path="/search/:id" element={<RecordDetail />} />
+            <Route path="/students" element={<StudentsView />} />
+            <Route path="/students/:id" element={<StudentDetail />} />
+            <Route path="/statistics" element={<Statistics />} />
+            <Route path="/report" element={<ReportExport />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }

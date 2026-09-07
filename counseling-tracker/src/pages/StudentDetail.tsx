@@ -131,9 +131,11 @@ export default function StudentDetail() {
   if (notFound) {
     return (
       <div>
-        <button className="btn-icon" title="목록으로" style={{ marginBottom: 12 }} onClick={() => navigate('/students')}>
-          ←
-        </button>
+        <div className="page-header">
+          <button className="back-btn" onClick={() => navigate('/students')}>
+            ← 학생 관리
+          </button>
+        </div>
         <div className="card empty-state">학생을 찾을 수 없습니다.</div>
       </div>
     );
@@ -145,29 +147,26 @@ export default function StudentDetail() {
 
   return (
     <div>
-      <button className="btn-icon" title="목록으로" style={{ marginBottom: 12 }} onClick={() => navigate('/students')}>
-        ←
-      </button>
-
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Avatar name={student.name} size={44} />
-          <div>
-            <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {student.name}
-              <button
-                className="btn"
-                style={{ padding: '2px 8px', fontSize: 13, color: student.pinned ? 'var(--accent)' : undefined }}
-                onClick={handleTogglePin}
-                title="즐겨찾기"
-              >
-                {student.pinned ? '★ 고정됨' : '☆ 고정'}
-              </button>
-            </h1>
-            <p className="page-subtitle">
-              {student.school_year ? `${student.school_year}학년도` : '학년도 미지정'} · {formatClassInfo(student)}
-            </p>
-          </div>
+      <div className="page-header" style={{ alignItems: 'center' }}>
+        <button className="back-btn" onClick={() => navigate('/students')}>
+          ← 학생 관리
+        </button>
+        <Avatar name={student.name} size={34} />
+        <div>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {student.name}
+            <button
+              className="btn btn-sm"
+              style={{ color: student.pinned ? 'var(--accent)' : undefined }}
+              onClick={handleTogglePin}
+              title="즐겨찾기"
+            >
+              {student.pinned ? '★ 고정됨' : '☆ 고정'}
+            </button>
+          </h1>
+          <p className="page-subtitle">
+            {student.school_year ? `${student.school_year}학년도` : '학년도 미지정'} · {formatClassInfo(student)}
+          </p>
         </div>
       </div>
 

@@ -10,25 +10,23 @@ const NAV_ITEMS = [
   { to: '/settings', label: '설정' }
 ];
 
-export default function TopNav() {
+export default function Sidebar() {
   return (
-    <>
-      <div className="top-banner">
-        <span className="top-banner-title">상담기록관리</span>
-        <span className="top-banner-sub">로컬 암호화 저장 · 외부 전송 없음</span>
-      </div>
-      <nav className="top-nav">
+    <aside className="sidebar">
+      <div className="sidebar-title">상담기록관리</div>
+      <nav className="sidebar-nav">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.end}
-            className={({ isActive }) => 'top-nav-link' + (isActive ? ' active' : '')}
+            className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}
           >
             {item.label}
           </NavLink>
         ))}
       </nav>
-    </>
+      <div className="sidebar-footer">v0.2.0 · 로컬 암호화 저장</div>
+    </aside>
   );
 }
