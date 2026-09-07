@@ -10,6 +10,7 @@ import {
   Tooltip
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
+import { ChevronRightIcon } from '../components/icons';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler, Tooltip);
 
@@ -295,7 +296,7 @@ export function DigestRecent({ digest, onOpenRecord }: { digest: StudentDigest; 
               </span>
             ) : null}
             <button className="btn-icon" style={{ marginLeft: 'auto' }} title="전체 기록 열기" onClick={() => onOpenRecord(r.id)}>
-              →
+              <ChevronRightIcon />
             </button>
           </div>
           <div className="digest-content">{(r.content || '').slice(0, 120) || '(내용 없음)'}</div>

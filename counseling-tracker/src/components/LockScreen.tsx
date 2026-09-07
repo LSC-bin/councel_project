@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LockIcon } from './icons';
 
 export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const [password, setPassword] = useState('');
@@ -33,7 +34,9 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
       }}
     >
       <form onSubmit={handleSubmit} className="card" style={{ width: 320, textAlign: 'center' }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🔒</div>
+        <div style={{ marginBottom: 8, color: 'var(--accent)' }}>
+          <LockIcon />
+        </div>
         <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>상담기록관리</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginBottom: 16 }}>
           잠긴 앱입니다. 비밀번호를 입력하세요.

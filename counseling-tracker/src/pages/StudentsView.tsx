@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, ProfileFields, StudentFormFields, formatClassInfo, useProfileFieldState } from './studentShared';
+import { PinIcon, PlusIcon } from '../components/icons';
+import Modal from '../components/Modal';
 
 export default function StudentsView() {
   const navigate = useNavigate();
@@ -37,19 +39,21 @@ export default function StudentsView() {
       <div className="card" style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
         <input className="input" placeholder="이름 또는 번호 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }} onClick={() => setAdding(true)}>
-          + 학생 추가
+          <PlusIcon /> 학생 추가
         </button>
       </div>
 
       {adding && (
-        <AddStudentForm
-          onCancel={() => setAdding(false)}
-          onAdded={(s) => {
-            setAdding(false);
-            refresh();
-            navigate(`/students/${s.id}`);
-          }}
-        />
+        <Modal title="학생 추가" onClose={() => setAdding(false)} maxWidth={560}>
+          <AddStudentForm
+            onCancel={() => setAdding(false)}
+            onAdded={(s) => {
+              setAdding(false);
+              refresh();
+              navigate(`/students/${s.id}`);
+            }}
+          />
+        </Modal>
       )}
 
       <div className="card" style={{ padding: 0 }}>
@@ -57,7 +61,6 @@ export default function StudentsView() {
           <div className="empty-state">불러오는 중…</div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">☺</div>
             <div>{students.length === 0 ? '등록된 학생이 없습니다.' : '검색 결과가 없습니다.'}</div>
           </div>
         ) : (
@@ -78,7 +81,11 @@ export default function StudentsView() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <Avatar name={s.name} size={20} />
                       {s.name}
-                      {!!s.pinned && <span style={{ color: 'var(--accent)' }}>★</span>}
+                      {!!s.pinned && (
+                        <span style={{ color: 'var(--accent)' }} title="즐겨찾기 고정됨">
+                          <PinIcon filled />
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td>{s.school_year ?? '-'}</td>
@@ -131,7 +138,7 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
   }
 
   return (
-    <div className="card" style={{ marginBottom: 12 }}>
+    <div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ flex: '1 1 140px' }}>
           <label className="field-label">이름 *</label>
@@ -147,22 +154,24 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
           number={number}
           setNumber={setNumber}
         />
-        <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleAdd}>
-          추가
-        </button>
-        <button className="btn-icon" title="취소" onClick={onCancel}>
-          ✕
-        </button>
       </div>
       <button
         type="button"
-        className="btn"
-        style={{ marginTop: 10, padding: '3px 8px', fontSize: 12.5 }}
+        className="btn btn-sm"
+        style={{ marginTop: 10 }}
         onClick={() => setShowProfile((v) => !v)}
       >
-        {showProfile ? '▾ 보호자·연락처 정보 접기' : '▸ 보호자·연락처 정보 입력 (선택)'}
+        {showProfile ? '보호자·연락처 정보 접기' : '보호자·연락처 정보 입력 (선택)'}
       </button>
       {showProfile && <ProfileFields {...profile} />}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+        <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleAdd}>
+          추가
+        </button>
+        <button className="btn" onClick={onCancel}>
+          취소
+        </button>
+      </div>
     </div>
   );
 }

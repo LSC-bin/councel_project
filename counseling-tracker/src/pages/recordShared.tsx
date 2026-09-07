@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { scoreColor } from './studentShared';
+import { CloseIcon } from '../components/icons';
 
 const RELATED_TYPES: RelatedType[] = ['학생', '보호자', '교사', '기타'];
 
@@ -118,9 +119,9 @@ export function RelationEditor({
                 type="button"
                 onClick={() => handleRemove(i)}
                 title="삭제"
-                style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-faint)', padding: 0, marginLeft: 2, fontSize: 13 }}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-faint)', padding: 0, marginLeft: 2 }}
               >
-                ✕
+                <CloseIcon />
               </button>
             </span>
           ))}
@@ -209,8 +210,8 @@ export function RelationEditor({
               ))}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
-              <span>← 갈등·나쁨</span>
-              <span>친밀·좋음 →</span>
+              <span>갈등·나쁨</span>
+              <span>친밀·좋음</span>
             </div>
           </div>
 
@@ -223,8 +224,8 @@ export function RelationEditor({
             <button type="button" className="btn btn-primary" style={{ fontSize: 12.5 }} onClick={handleSubmit}>
               {editIndex != null ? '수정 완료' : '추가'}
             </button>
-            <button type="button" className="btn-icon" title="취소" onClick={resetForm}>
-              ✕
+            <button type="button" className="btn" style={{ fontSize: 12.5 }} onClick={resetForm}>
+              취소
             </button>
           </div>
         </div>

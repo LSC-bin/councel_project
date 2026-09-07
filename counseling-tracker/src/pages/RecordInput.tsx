@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { RelationEditor } from './recordShared';
+import { CalendarIcon, CloseIcon, PinIcon } from '../components/icons';
 
 const REFERRAL_OPTIONS = ['Wee클래스', '학폭담당', '보건교사', '학부모', '기타'];
 
@@ -172,7 +173,7 @@ export default function RecordInput() {
                       setStudentQuery('');
                     }}
                   >
-                    ✕
+                    <CloseIcon />
                   </button>
                 </div>
               ) : (
@@ -232,7 +233,7 @@ export default function RecordInput() {
                     style={{ padding: '3px 10px', fontSize: 12.5 }}
                     onClick={() => setStudentId(s.id)}
                   >
-                    ★ {s.name}
+                    <PinIcon filled /> {s.name}
                   </button>
                 ))}
               </div>
@@ -415,7 +416,7 @@ export default function RecordInput() {
                 style={{ fontSize: 12.5 }}
                 onClick={() => navigate('/', selectedStudent ? { state: { studentId: selectedStudent.id, studentName: selectedStudent.name } } : undefined)}
               >
-                📅 다음 상담 예약은 캘린더에서
+                <CalendarIcon /> 다음 상담 예약은 캘린더에서
               </button>
             </div>
           </div>

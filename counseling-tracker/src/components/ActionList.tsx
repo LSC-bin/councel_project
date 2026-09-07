@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TrashIcon } from './icons';
+import { TrashIcon, PlusIcon, CloseIcon, CheckIcon, EditIcon } from './icons';
 
 // 상담 이후 조치사항 위젯.
 // recordId 또는 studentId 기준의 조치 목록을 보여주고, 추가/완료토글/마감일/삭제를 지원한다.
@@ -72,7 +72,7 @@ export default function ActionList({
             조치사항 {pendingCount > 0 && <span style={{ color: 'var(--danger)' }}>({pendingCount}건 대기)</span>}
           </span>
           <button className="btn btn-sm" onClick={() => setAdding(true)}>
-            + 조치 추가
+            <PlusIcon /> 조치 추가
           </button>
         </div>
       )}

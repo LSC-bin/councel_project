@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { TrashIcon, EditIcon, CloseIcon, CheckIcon } from './icons';
 import Modal from './Modal';
-import { EditIcon, TrashIcon } from './icons';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -279,7 +279,7 @@ function AppointmentRow({ appointment, onChanged }: { appointment: Appointment; 
               겹치는 예약: {conflicts.map((c) => `${c.student_name}(${c.start_time}~${c.end_time})`).join(', ')}
             </p>
           ) : (
-            <p style={{ fontSize: 12, color: 'var(--success)' }}>✓ 예약 가능한 시간입니다.</p>
+            <p style={{ fontSize: 12, color: "var(--success)", display: "flex", alignItems: "center", gap: 4 }}><CheckIcon /> 예약 가능한 시간입니다.</p>
           )
         ) : null}
         {error && <p style={{ fontSize: 12.5, color: 'var(--danger)' }}>{error}</p>}
@@ -288,8 +288,8 @@ function AppointmentRow({ appointment, onChanged }: { appointment: Appointment; 
           <button className="btn btn-primary" style={{ fontSize: 12.5 }} disabled={saving || conflicts.length > 0} onClick={handleSave}>
             {saving ? '저장 중…' : '저장'}
           </button>
-          <button className="btn-icon" title="취소" onClick={() => setEditing(false)}>
-            ✕
+          <button className="btn" style={{ fontSize: 12.5 }} onClick={() => setEditing(false)}>
+            취소
           </button>
         </div>
       </div>
@@ -443,7 +443,7 @@ function AddAppointmentForm({
             겹치는 예약: {conflicts.map((c) => `${c.student_name}(${c.start_time}~${c.end_time})`).join(', ')}
           </p>
         ) : (
-          <p style={{ fontSize: 12, color: 'var(--success)' }}>✓ 예약 가능한 시간입니다.</p>
+          <p style={{ fontSize: 12, color: "var(--success)", display: "flex", alignItems: "center", gap: 4 }}><CheckIcon /> 예약 가능한 시간입니다.</p>
         )
       ) : null}
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { TrashIcon } from '../components/icons';
+import { TrashIcon, EditIcon, FolderIcon, PlusIcon } from '../components/icons';
 
 // 폴더 필터 값: 'all' = 전체, 'none' = 미분류, 숫자 = 폴더 id
 type FolderFilter = 'all' | 'none' | number;
@@ -104,7 +104,9 @@ export default function SearchView() {
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {/* 좌: 폴더 패널 */}
         <div className="card" style={{ flex: '0 0 200px', padding: '8px 6px' }}>
-          <div className="section-title" style={{ padding: '0 8px', marginBottom: 6 }}>상담 폴더</div>
+          <div className="section-title" style={{ padding: '0 8px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <FolderIcon /> 상담 폴더
+          </div>
           <div className="folder-list">
             <button
               type="button"
@@ -140,7 +142,7 @@ export default function SearchView() {
                   <span className="folder-count">{f.record_count}</span>
                 </button>
                 <button className="btn-icon" title="이름 변경" style={{ width: 20, height: 20 }} onClick={() => handleRenameFolder(f)}>
-                  ✎
+                  <EditIcon />
                 </button>
                 <button className="btn-icon btn-icon-danger" title="삭제" style={{ width: 20, height: 20 }} onClick={() => handleDeleteFolder(f)}>
                   <TrashIcon />
@@ -156,8 +158,8 @@ export default function SearchView() {
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddFolder()}
             />
-            <button className="btn btn-primary btn-sm" disabled={!newFolderName.trim()} onClick={handleAddFolder}>
-              추가
+            <button className="btn btn-primary btn-sm" disabled={!newFolderName.trim()} onClick={handleAddFolder} title="폴더 추가">
+              <PlusIcon />
             </button>
           </div>
           {folderError && <p style={{ color: 'var(--danger)', fontSize: 11.5, padding: '4px 8px 0', margin: 0 }}>{folderError}</p>}

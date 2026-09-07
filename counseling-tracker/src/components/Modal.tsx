@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { CloseIcon } from './icons';
 
 interface Props {
   title: string;
@@ -21,9 +22,9 @@ export default function Modal({ title, onClose, children, maxWidth = 420 }: Prop
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" style={{ maxWidth }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div style={{ fontWeight: 600, fontSize: 14.5 }}>{title}</div>
+          <div className="modal-title">{title}</div>
           <button className="btn-icon" title="닫기" onClick={onClose}>
-            ✕
+            <CloseIcon />
           </button>
         </div>
         <div className="modal-body">{children}</div>

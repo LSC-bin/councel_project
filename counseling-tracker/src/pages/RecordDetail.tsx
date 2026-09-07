@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RelationEditor } from './recordShared';
-import { TrashIcon } from '../components/icons';
+import { TrashIcon, BackIcon, CalendarIcon } from '../components/icons';
 import { Avatar, formatClassInfo } from './studentShared';
 import ActionList from '../components/ActionList';
 
@@ -115,8 +115,8 @@ export default function RecordDetail() {
     return (
       <div>
         <div className="page-header">
-          <button className="back-btn" onClick={() => navigate('/search')}>
-            ← 조회·검색
+          <button className="back-btn" onClick={() => navigate('/search')} title="조회·검색으로 돌아가기">
+            <BackIcon />
           </button>
         </div>
         <div className="card empty-state">기록을 찾을 수 없습니다.</div>
@@ -131,8 +131,8 @@ export default function RecordDetail() {
   return (
     <div>
       <div className="page-header" style={{ alignItems: 'center' }}>
-        <button className="back-btn" onClick={() => navigate('/search')}>
-          ← 조회·검색
+        <button className="back-btn" onClick={() => navigate('/search')} title="조회·검색으로 돌아가기">
+          <BackIcon />
         </button>
         <Avatar name={record.student_name} size={34} />
         <div>
@@ -237,7 +237,7 @@ export default function RecordDetail() {
                 className="btn"
                 onClick={() => navigate('/', { state: { studentId: record.student_id, studentName: record.student_name } })}
               >
-                📅 예약 잡기
+                <CalendarIcon /> 예약 잡기
               </button>
               <button className="btn-icon btn-icon-danger" title="삭제" onClick={handleDelete}>
                 <TrashIcon />
@@ -335,8 +335,8 @@ export default function RecordDetail() {
               <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
                 {saving ? '저장 중…' : '저장'}
               </button>
-              <button className="btn-icon" title="취소" onClick={() => setEditing(false)}>
-                ✕
+              <button className="btn" onClick={() => setEditing(false)}>
+                취소
               </button>
             </div>
           </>

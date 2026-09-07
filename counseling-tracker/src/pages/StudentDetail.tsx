@@ -13,8 +13,9 @@ import {
   formatClassInfo,
   useProfileFieldState
 } from './studentShared';
-import { EditIcon, TrashIcon } from '../components/icons';
+import { EditIcon, TrashIcon, BackIcon, PinIcon, CalendarIcon } from '../components/icons';
 import ActionList from '../components/ActionList';
+import Modal from '../components/Modal';
 
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -132,8 +133,8 @@ export default function StudentDetail() {
     return (
       <div>
         <div className="page-header">
-          <button className="back-btn" onClick={() => navigate('/students')}>
-            ← 학생 관리
+          <button className="back-btn" onClick={() => navigate('/students')} title="학생 관리로 돌아가기">
+            <BackIcon />
           </button>
         </div>
         <div className="card empty-state">학생을 찾을 수 없습니다.</div>
@@ -148,8 +149,8 @@ export default function StudentDetail() {
   return (
     <div>
       <div className="page-header" style={{ alignItems: 'center' }}>
-        <button className="back-btn" onClick={() => navigate('/students')}>
-          ← 학생 관리
+        <button className="back-btn" onClick={() => navigate('/students')} title="학생 관리로 돌아가기">
+          <BackIcon />
         </button>
         <Avatar name={student.name} size={34} />
         <div>
@@ -159,9 +160,9 @@ export default function StudentDetail() {
               className="btn btn-sm"
               style={{ color: student.pinned ? 'var(--accent)' : undefined }}
               onClick={handleTogglePin}
-              title="즐겨찾기"
+              title={student.pinned ? '즐겨찾기 해제' : '즐겨찾기 고정'}
             >
-              {student.pinned ? '★ 고정됨' : '☆ 고정'}
+              <PinIcon filled={!!student.pinned} />
             </button>
           </h1>
           <p className="page-subtitle">
@@ -171,8 +172,10 @@ export default function StudentDetail() {
       </div>
 
       {summary?.nextAppointment && (
-        <div className="banner" style={{ borderColor: 'var(--accent)', background: 'var(--accent-bg)', cursor: 'default' }}>
-          <span className="banner-icon">📅</span>
+        <div className="banner banner-info" style={{ cursor: 'default' }}>
+          <span className="banner-icon">
+            <CalendarIcon />
+          </span>
           <span>다음 상담 예정일: {summary.nextAppointment}</span>
         </div>
       )}
@@ -183,7 +186,7 @@ export default function StudentDetail() {
             기록 추가
           </button>
           <button className="btn" onClick={() => navigate('/', { state: { studentId: student.id, studentName: student.name } })}>
-            📅 예약 잡기
+            <CalendarIcon /> 예약 잡기
           </button>
           <button className="btn-icon" title="정보 수정" onClick={() => setEditing(true)}>
             <EditIcon />
@@ -193,11 +196,11 @@ export default function StudentDetail() {
           </button>
         </div>
       ) : (
-        <div className="card" style={{ marginBottom: 12, maxWidth: 640 }}>
+        <Modal title={`${student.name} 학생 정보 수정`} onClose={() => setEditing(false)} maxWidth={560}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 140px' }}>
               <label className="field-label">이름</label>
-              <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+              <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
             </div>
             <StudentFormFields
               schoolYear={schoolYear}
@@ -215,11 +218,11 @@ export default function StudentDetail() {
             <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleSave}>
               저장
             </button>
-            <button className="btn-icon" title="취소" onClick={() => setEditing(false)}>
-              ✕
+            <button className="btn" onClick={() => setEditing(false)}>
+              취소
             </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
