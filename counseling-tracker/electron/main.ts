@@ -63,6 +63,7 @@ function registerIpcHandlers() {
   ipcMain.handle('records:setRelations', (_e, recordId: number, relations) => db.setRecordRelations(recordId, relations));
   ipcMain.handle('students:relationSummary', (_e, studentId: number) => db.getStudentRelationSummary(studentId));
   ipcMain.handle('students:digest', (_e, studentId: number) => db.getStudentDigest(studentId));
+  ipcMain.handle('relations:graph', () => db.getRelationGraph());
 
   // 폴더
   ipcMain.handle('folders:get', () => db.getFolders());

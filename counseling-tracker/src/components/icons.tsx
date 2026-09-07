@@ -21,8 +21,8 @@ export function TrashIcon() {
 
 export function BackIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9.5 3.5 5 8l4.5 4.5" />
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.8 3.2 5 8l4.8 4.8" />
     </svg>
   );
 }

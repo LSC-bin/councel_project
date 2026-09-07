@@ -9,6 +9,7 @@ import RecordDetail from './pages/RecordDetail';
 import StudentsView from './pages/StudentsView';
 import StudentDetail from './pages/StudentDetail';
 import Statistics from './pages/Statistics';
+import RelationGraphView from './pages/RelationGraphView';
 import ReportExport from './pages/ReportExport';
 import Settings from './pages/Settings';
 
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/students" element={<StudentsView />} />
             <Route path="/students/:id" element={<StudentDetail />} />
             <Route path="/statistics" element={<Statistics />} />
+            <Route path="/relations" element={<RelationGraphView />} />
             <Route path="/report" element={<ReportExport />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

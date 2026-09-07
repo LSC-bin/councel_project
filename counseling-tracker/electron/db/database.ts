@@ -1041,6 +1041,78 @@ export function deleteAction(id: number) {
   return { ok: true };
 }
 
+// ---------- 학생 관계 그래프 ----------
+// 학생-학생 관계(기록의 관련 대상 중 '학생')를 무방향 쌍으로 집계한다.
+// 쌍마다: 언급 횟수, 가장 최근 점수(엣지 색 기준), 전체 평균, 점수 범위, 양방향 여부.
+export function getRelationGraph() {
+  type Row = {
+    author_id: number;
+    author_name: string;
+    other_id: number;
+    other_name: string;
+    score: number | null;
+    record_date: string;
+  };
+  const rows = all<Row>(
+    `SELECT r.student_id as author_id, s1.name as author_name,
+            rr.related_student_id as other_id, s2.name as other_name,
+            rr.relation_score as score, r.record_date
+     FROM record_relations rr
+     JOIN consult_records r ON r.id = rr.record_id
+     JOIN students s1 ON s1.id = r.student_id
+     JOIN students s2 ON s2.id = rr.related_student_id
+     WHERE rr.related_type = '학생'`
+  );
+
+  const groups = new Map<string, { a: number; aName: string; b: number; bName: string; entries: { score: number | null; date: string; from: number }[] }>();
+  for (const row of rows) {
+    const key = row.author_id < row.other_id ? `${row.author_id}-${row.other_id}` : `${row.other_id}-${row.author_id}`;
+    const g =
+      groups.get(key) ??
+      {
+        a: Math.min(row.author_id, row.other_id),
+        aName: row.author_id < row.other_id ? row.author_name : row.other_name,
+        b: Math.max(row.author_id, row.other_id),
+        bName: row.author_id < row.other_id ? row.other_name : row.author_name,
+        entries: []
+      };
+    g.entries.push({ score: row.score, date: row.record_date, from: row.author_id });
+    groups.set(key, g);
+  }
+
+  const edges = Array.from(groups.values()).map((g) => {
+    const scored = g.entries.filter((e): e is { score: number; date: string; from: number } => e.score != null);
+    scored.sort((x, y) => x.date.localeCompare(y.date));
+    const values = scored.map((s) => s.score);
+    const latest = scored.length > 0 ? scored[scored.length - 1] : null;
+    return {
+      a: g.a,
+      aName: g.aName,
+      b: g.b,
+      bName: g.bName,
+      count: g.entries.length,
+      latestScore: latest ? latest.score : null,
+      latestFrom: latest ? latest.from : null,
+      avgScore: values.length > 0 ? Math.round((values.reduce((s, v) => s + v, 0) / values.length) * 10) / 10 : null,
+      minScore: values.length > 0 ? Math.min(...values) : null,
+      maxScore: values.length > 0 ? Math.max(...values) : null,
+      bidirectional: new Set(g.entries.map((e) => e.from)).size > 1
+    };
+  });
+
+  const nodeIds = new Set<number>();
+  const nodeNames = new Map<number, string>();
+  for (const e of edges) {
+    nodeIds.add(e.a);
+    nodeIds.add(e.b);
+    nodeNames.set(e.a, e.aName);
+    nodeNames.set(e.b, e.bName);
+  }
+  const nodes = Array.from(nodeIds).map((id) => ({ id, name: nodeNames.get(id) ?? `#${id}` }));
+
+  return { nodes, edges };
+}
+
 // ---------- 학생 상담 다이제스트 ----------
 // 학생 개인 화면용: 이전 상담 내용 간단 정리 + 상태 점수 시계열.
 export function getStudentDigest(studentId: number) {

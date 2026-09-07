@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { to: '/input', label: '기록 입력' },
   { to: '/search', label: '조회·검색' },
   { to: '/students', label: '학생 관리' },
+  { to: '/relations', label: '관계 그래프' },
   { to: '/statistics', label: '통계' },
   { to: '/report', label: '보고서·백업' },
   { to: '/settings', label: '설정' }

@@ -23,6 +23,7 @@ const api = {
   setRecordRelations: (recordId: number, relations: unknown) => ipcRenderer.invoke('records:setRelations', recordId, relations),
   getStudentRelationSummary: (studentId: number) => ipcRenderer.invoke('students:relationSummary', studentId),
   getStudentDigest: (studentId: number) => ipcRenderer.invoke('students:digest', studentId),
+  getRelationGraph: () => ipcRenderer.invoke('relations:graph'),
 
   // 폴더
   getFolders: () => ipcRenderer.invoke('folders:get'),

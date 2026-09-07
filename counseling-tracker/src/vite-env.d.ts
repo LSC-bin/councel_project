@@ -63,6 +63,25 @@ interface StudentDigestRecord {
   type_color: string | null;
 }
 
+interface RelationEdge {
+  a: number;
+  aName: string;
+  b: number;
+  bName: string;
+  count: number;
+  latestScore: number | null;
+  latestFrom: number | null;
+  avgScore: number | null;
+  minScore: number | null;
+  maxScore: number | null;
+  bidirectional: boolean;
+}
+
+interface RelationGraph {
+  nodes: { id: number; name: string }[];
+  edges: RelationEdge[];
+}
+
 interface StudentDigest {
   recent: StudentDigestRecord[];
   scoreSeries: { record_date: string; state_score: number }[];
@@ -245,6 +264,7 @@ interface Window {
     setRecordRelations: (recordId: number, relations: RecordRelationInput[]) => Promise<RecordRelation[]>;
     getStudentRelationSummary: (studentId: number) => Promise<StudentRelationSummary>;
     getStudentDigest: (studentId: number) => Promise<StudentDigest>;
+    getRelationGraph: () => Promise<RelationGraph>;
 
     getFolders: () => Promise<RecordFolder[]>;
     addFolder: (name: string) => Promise<{ ok: boolean; error?: string; folder?: RecordFolder }>;
