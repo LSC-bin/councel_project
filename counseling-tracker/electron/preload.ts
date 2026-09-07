@@ -22,6 +22,19 @@ const api = {
   getRecordRelations: (recordId: number) => ipcRenderer.invoke('records:getRelations', recordId),
   setRecordRelations: (recordId: number, relations: unknown) => ipcRenderer.invoke('records:setRelations', recordId, relations),
   getStudentRelationSummary: (studentId: number) => ipcRenderer.invoke('students:relationSummary', studentId),
+  getStudentDigest: (studentId: number) => ipcRenderer.invoke('students:digest', studentId),
+
+  // 폴더
+  getFolders: () => ipcRenderer.invoke('folders:get'),
+  addFolder: (name: string) => ipcRenderer.invoke('folders:add', name),
+  renameFolder: (id: number, name: string) => ipcRenderer.invoke('folders:rename', id, name),
+  deleteFolder: (id: number) => ipcRenderer.invoke('folders:delete', id),
+
+  // 조치사항
+  getActions: (filter?: { recordId?: number; studentId?: number; pendingOnly?: boolean }) => ipcRenderer.invoke('actions:get', filter),
+  addAction: (input: unknown) => ipcRenderer.invoke('actions:add', input),
+  updateAction: (id: number, patch: unknown) => ipcRenderer.invoke('actions:update', id, patch),
+  deleteAction: (id: number) => ipcRenderer.invoke('actions:delete', id),
 
   // 통계 / 위기감지
   getMonthlyStats: () => ipcRenderer.invoke('stats:monthly'),
@@ -30,6 +43,12 @@ const api = {
   getPinnedStudents: () => ipcRenderer.invoke('students:pinned'),
   getUpcomingAppointments: (limit = 5) => ipcRenderer.invoke('stats:upcoming', limit),
   exportAnonymizedReport: () => ipcRenderer.invoke('report:exportAnonymized'),
+
+  // 백업 / 복원
+  createBackupDialog: () => ipcRenderer.invoke('backup:create'),
+  createBackupWithPassword: (password: string, filePath: string) => ipcRenderer.invoke('backup:createWithPassword', password, filePath),
+  restoreBackupDialog: () => ipcRenderer.invoke('backup:restore'),
+  restoreBackupWithPassword: (password: string, filePath: string) => ipcRenderer.invoke('backup:restoreWithPassword', password, filePath),
 
   // 예약(캘린더)
   getAppointmentsInRange: (startDate: string, endDate: string) => ipcRenderer.invoke('appointments:inRange', startDate, endDate),

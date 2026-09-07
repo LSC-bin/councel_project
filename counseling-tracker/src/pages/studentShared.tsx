@@ -1,8 +1,17 @@
 import { useState } from 'react';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Filler,
+  Tooltip
+} from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler, Tooltip);
 
 export function formatClassInfo(s: { grade: number | null; class_no: number | null; number: number | null }) {
   if (s.grade == null && s.class_no == null && s.number == null) return '-';
@@ -259,6 +268,109 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
 export function FollowUpStatus({ r }: { r: ConsultRecord }) {
   if (!r.follow_up_needed) return <span style={{ color: 'var(--text-faint)' }}>-</span>;
   return <span style={{ color: r.follow_up_done ? 'var(--success)' : 'var(--danger)' }}>{r.follow_up_done ? '완료' : '대기'}</span>;
+}
+
+// ---------- 학생 다이제스트: 이전 상담 간단 정리 ----------
+export function DigestRecent({ digest, onOpenRecord }: { digest: StudentDigest; onOpenRecord: (id: number) => void }) {
+  if (digest.recent.length === 0) {
+    return <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: 0 }}>아직 상담 기록이 없습니다.</p>;
+  }
+  return (
+    <div>
+      {digest.recent.map((r) => (
+        <div key={r.id} className="digest-item">
+          <div className="digest-head">
+            <strong style={{ color: 'var(--text)' }}>{r.record_date}</strong>
+            {r.type_name && (
+              <span className="badge" style={{ background: 'var(--bg-panel)', color: r.type_color ?? 'var(--text-secondary)' }}>
+                {r.type_name}
+              </span>
+            )}
+            {r.state_score != null && (
+              <span style={{ color: scoreColor(r.state_score), fontWeight: 700 }}>상태 {r.state_score}점</span>
+            )}
+            {r.follow_up_needed ? (
+              <span style={{ color: r.follow_up_done ? 'var(--success)' : 'var(--danger)' }}>
+                후속조치 {r.follow_up_done ? '완료' : '대기'}
+              </span>
+            ) : null}
+            <button className="btn-icon" style={{ marginLeft: 'auto' }} title="전체 기록 열기" onClick={() => onOpenRecord(r.id)}>
+              →
+            </button>
+          </div>
+          <div className="digest-content">{(r.content || '').slice(0, 120) || '(내용 없음)'}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------- 학생 상태 점수 그래프 (라인) ----------
+export function ScoreLineChart({ series }: { series: { record_date: string; state_score: number }[] }) {
+  if (series.length === 0) {
+    return <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: 0 }}>상태 점수가 기록된 상담이 없습니다.</p>;
+  }
+  const last = series[series.length - 1].state_score;
+  const first = series[0].state_score;
+  const trend = series.length >= 2 ? (last > first ? '호전' : last < first ? '악화' : '유지') : null;
+  return (
+    <div className="score-chart-wrap">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+        <span className="field-label" style={{ marginBottom: 0 }}>
+          학생 상태 추이 (1=어려움 ~ 5=좋음)
+        </span>
+        <span style={{ fontSize: 12 }}>
+          현재 <strong style={{ color: scoreColor(last) }}>{last}점</strong>
+          {trend && (
+            <span style={{ color: trend === '호전' ? 'var(--success)' : trend === '악화' ? 'var(--danger)' : 'var(--text-secondary)', marginLeft: 6, fontWeight: 700 }}>
+              {trend === '호전' ? '▲ 호전' : trend === '악화' ? '▼ 악화' : '― 유지'}
+            </span>
+          )}
+        </span>
+      </div>
+      <div style={{ height: Math.min(200, Math.max(120, 60 + series.length * 6)) }}>
+        <Line
+          data={{
+            labels: series.map((s) => s.record_date.slice(5)),
+            datasets: [
+              {
+                data: series.map((s) => s.state_score),
+                borderColor: '#2f6fb2',
+                backgroundColor: 'rgba(47, 111, 178, 0.08)',
+                pointBackgroundColor: series.map((s) => scoreColor(s.state_score)),
+                pointBorderColor: series.map((s) => scoreColor(s.state_score)),
+                pointRadius: 4,
+                borderWidth: 2,
+                fill: true,
+                tension: 0
+              }
+            ]
+          }}
+          options={{
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `상태 ${ctx.parsed.y}점`
+                }
+              }
+            },
+            scales: {
+              y: {
+                min: 1,
+                max: 5,
+                ticks: { stepSize: 1, precision: 0 },
+                grid: { color: '#e5eaf0' }
+              },
+              x: { grid: { display: false }, ticks: { font: { size: 10.5 } } }
+            }
+          }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function InfoRow({ label, value, tone }: { label: string; value?: string | null; tone?: 'danger' }) {

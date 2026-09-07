@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MetricCard from '../components/MetricCard';
 import Calendar from '../components/Calendar';
+import ActionList from '../components/ActionList';
 
 function initials(name: string) {
   return name.slice(0, 1);
@@ -16,7 +17,9 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState<CrisisAlert[]>([]);
   const [recent, setRecent] = useState<ConsultRecord[]>([]);
   const [pinned, setPinned] = useState<Student[]>([]);
+  const [pendingActionCount, setPendingActionCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [actionsKey, setActionsKey] = useState(0);
 
   // 학생 상세 등 다른 화면에서 "예약 잡기"로 넘어온 경우, 캘린더에 한 번만 전달한다.
   const [prefill, setPrefill] = useState(navState ?? null);
@@ -27,20 +30,22 @@ export default function Dashboard() {
       window.api.getMonthlyStats(),
       window.api.getCrisisAlerts(),
       window.api.getRecords({ limit: 8, order: 'desc' }),
-      window.api.getPinnedStudents()
+      window.api.getPinnedStudents(),
+      window.api.getActions({ pendingOnly: true })
     ])
-      .then(([s, a, r, p]) => {
+      .then(([s, a, r, p, acts]) => {
         if (cancelled) return;
         setStats(s);
         setAlerts(a);
         setRecent(r);
         setPinned(p);
+        setPendingActionCount(acts.length);
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [actionsKey]);
 
   const maxTypeCount = stats?.byType.length ? Math.max(...stats.byType.map((t) => t.count)) : 0;
 
@@ -74,9 +79,19 @@ export default function Dashboard() {
       <div className="metric-grid">
         <MetricCard label="이번 달 기록 건수" value={loading ? '—' : stats?.thisMonthCount ?? 0} />
         <MetricCard label="후속조치 대기" value={loading ? '—' : stats?.followUpPending ?? 0} />
+        <MetricCard label="조치사항 대기" value={loading ? '—' : pendingActionCount} alert={pendingActionCount > 0} />
         <MetricCard label="등록 학생 수" value={loading ? '—' : stats?.studentCount ?? 0} />
         <MetricCard label="생기부 미반영" value={loading ? '—' : stats?.niceUnreflectedCount ?? 0} />
       </div>
+
+      {!loading && (
+        <div className="section">
+          <h2 className="section-title">상담 이후 조치사항</h2>
+          <div className="card">
+            <ActionList showStudent compact pendingOnly onChanged={() => setActionsKey((k) => k + 1)} />
+          </div>
+        </div>
+      )}
 
       <div className="section">
         <h2 className="section-title">예약 캘린더</h2>
@@ -124,8 +139,7 @@ export default function Dashboard() {
                       <td>{r.record_date}</td>
                       <td>{r.student_name}</td>
                       <td>
-                        <span className="badge" style={{ background: `${r.type_color}22`, color: r.type_color }}>
-                          <span className="badge-dot" style={{ background: r.type_color }} />
+                        <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color, border: `1px solid ${r.type_color}44` }}>
                           {r.type_name}
                         </span>
                       </td>

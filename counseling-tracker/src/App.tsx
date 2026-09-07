@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
+import TopNav from './components/TopNav';
 import LockScreen from './components/LockScreen';
 import Dashboard from './pages/Dashboard';
 import RecordInput from './pages/RecordInput';
@@ -29,7 +29,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar />
+      <TopNav />
       <main className="content">
         <Routes>
           <Route path="/" element={<Dashboard />} />

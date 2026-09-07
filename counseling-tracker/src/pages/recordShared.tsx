@@ -170,7 +170,7 @@ export function RelationEditor({
                   {filtered.map((s) => (
                     <div
                       key={s.id}
-                      className="sidebar-link"
+                      className="dropdown-item"
                       style={{ cursor: 'pointer' }}
                       onClick={() => {
                         setPickedStudentId(s.id);

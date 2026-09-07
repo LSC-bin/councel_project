@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { RelationEditor } from './recordShared';
 import { TrashIcon } from '../components/icons';
 import { Avatar, formatClassInfo } from './studentShared';
+import ActionList from '../components/ActionList';
 
 const REFERRAL_OPTIONS = ['Wee클래스', '학폭담당', '보건교사', '학부모', '기타'];
 
@@ -15,9 +16,11 @@ export default function RecordDetail() {
   const [student, setStudent] = useState<Student | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [types, setTypes] = useState<ConsultType[]>([]);
+  const [folders, setFolders] = useState<RecordFolder[]>([]);
   const [editing, setEditing] = useState(false);
 
   const [typeId, setTypeId] = useState<number>(0);
+  const [folderId, setFolderId] = useState<number | null>(null);
   const [content, setContent] = useState('');
   const [stateScore, setStateScore] = useState<number | null>(null);
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
@@ -51,6 +54,7 @@ export default function RecordDetail() {
       }
       setRecord(r);
       setTypeId(r.type_id);
+      setFolderId(r.folder_id ?? null);
       setContent(r.content ?? '');
       setStateScore(r.state_score);
       setFollowUpNeeded(!!r.follow_up_needed);
@@ -71,6 +75,7 @@ export default function RecordDetail() {
     loadRecord();
     loadRelations();
     window.api.getConsultTypes().then(setTypes);
+    window.api.getFolders().then(setFolders);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordId]);
 
@@ -83,6 +88,7 @@ export default function RecordDetail() {
     try {
       await window.api.updateRecord(recordId, {
         type_id: typeId,
+        folder_id: folderId,
         content,
         state_score: stateScore,
         follow_up_needed: followUpNeeded,
@@ -146,10 +152,12 @@ export default function RecordDetail() {
       <div className="card" style={{ maxWidth: 640 }}>
         {!editing ? (
           <>
-            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="badge" style={{ background: `${record.type_color}22`, color: record.type_color }}>
-                <span className="badge-dot" style={{ background: record.type_color }} />
+            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span className="badge" style={{ background: `${record.type_color}18`, color: record.type_color, border: `1px solid ${record.type_color}44` }}>
                 {record.type_name}
+              </span>
+              <span className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                폴더: {record.folder_name ?? '미분류'}
               </span>
               <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>작성 {record.created_at?.slice(0, 16).replace('T', ' ')}</span>
             </div>
@@ -163,9 +171,10 @@ export default function RecordDetail() {
                 gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px 12px',
                 fontSize: 12.5,
-                background: 'var(--bg-hover)',
-                borderRadius: 8,
-                padding: '10px 12px'
+                background: 'var(--bg-panel)',
+                border: '1px solid var(--border)',
+                borderRadius: 2,
+                padding: '8px 12px'
               }}
             >
               <div>
@@ -199,7 +208,7 @@ export default function RecordDetail() {
                         key={r.id}
                         type="button"
                         className="badge badge-link"
-                        style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}
+                        style={{ background: 'var(--bg-panel)', color: 'var(--text)', border: '1px solid var(--border)' }}
                         onClick={() => navigate(`/students/${r.related_student_id}`)}
                         title="학생 프로필로 이동"
                       >
@@ -207,7 +216,7 @@ export default function RecordDetail() {
                         {r.relation_score != null && ` · ${r.relation_score}점`}
                       </button>
                     ) : (
-                      <span key={r.id} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
+                      <span key={r.id} className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text)', border: '1px solid var(--border)' }}>
                         {r.related_type} · {r.related_label}
                         {r.relation_score != null && ` · ${r.relation_score}점`}
                       </span>
@@ -216,6 +225,9 @@ export default function RecordDetail() {
                 </div>
               </div>
             )}
+            <div className="field" style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <ActionList recordId={recordId} studentId={record.student_id} />
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary" onClick={() => setEditing(true)}>
                 수정
@@ -239,6 +251,21 @@ export default function RecordDetail() {
                 {types.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label className="field-label">상담 폴더</label>
+              <select
+                className="select"
+                value={folderId ?? ''}
+                onChange={(e) => setFolderId(e.target.value === '' ? null : Number(e.target.value))}
+              >
+                <option value="">미분류</option>
+                {folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
                   </option>
                 ))}
               </select>

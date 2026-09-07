@@ -62,6 +62,19 @@ function registerIpcHandlers() {
   ipcMain.handle('records:getRelations', (_e, recordId: number) => db.getRecordRelations(recordId));
   ipcMain.handle('records:setRelations', (_e, recordId: number, relations) => db.setRecordRelations(recordId, relations));
   ipcMain.handle('students:relationSummary', (_e, studentId: number) => db.getStudentRelationSummary(studentId));
+  ipcMain.handle('students:digest', (_e, studentId: number) => db.getStudentDigest(studentId));
+
+  // 폴더
+  ipcMain.handle('folders:get', () => db.getFolders());
+  ipcMain.handle('folders:add', (_e, name: string) => db.addFolder(name));
+  ipcMain.handle('folders:rename', (_e, id: number, name: string) => db.renameFolder(id, name));
+  ipcMain.handle('folders:delete', (_e, id: number) => db.deleteFolder(id));
+
+  // 조치사항
+  ipcMain.handle('actions:get', (_e, filter) => db.getActions(filter));
+  ipcMain.handle('actions:add', (_e, input) => db.addAction(input));
+  ipcMain.handle('actions:update', (_e, id: number, patch) => db.updateAction(id, patch));
+  ipcMain.handle('actions:delete', (_e, id: number) => db.deleteAction(id));
 
   // 통계 / 위기감지
   ipcMain.handle('stats:monthly', () => db.getMonthlyStats());
@@ -88,6 +101,32 @@ function registerIpcHandlers() {
     await buildAnonymizedReport(result.filePath);
     return { canceled: false, filePath: result.filePath };
   });
+
+  // 백업 / 복원
+  ipcMain.handle('backup:create', async () => {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: '암호화 백업 만들기',
+      defaultPath: `상담기록_백업_${new Date().toISOString().slice(0, 10)}.backup`,
+      filters: [{ name: '상담기록 백업', extensions: ['backup'] }]
+    });
+    if (canceled || !filePath) return { canceled: true };
+    return { canceled: false, needPassword: true, filePath };
+  });
+  ipcMain.handle('backup:createWithPassword', (_e, password: string, filePath: string) =>
+    db.createBackup(password, filePath)
+  );
+  ipcMain.handle('backup:restore', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: '백업 파일 선택',
+      filters: [{ name: '상담기록 백업', extensions: ['backup'] }],
+      properties: ['openFile']
+    });
+    if (canceled || filePaths.length === 0) return { canceled: true };
+    return { canceled: false, needPassword: true, filePath: filePaths[0] };
+  });
+  ipcMain.handle('backup:restoreWithPassword', (_e, password: string, filePath: string) =>
+    db.restoreBackup(password, filePath)
+  );
 
   // 유형 / 템플릿
   ipcMain.handle('types:get', () => db.getConsultTypes());

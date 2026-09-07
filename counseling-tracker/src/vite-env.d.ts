@@ -6,6 +6,7 @@ interface RecordFilter {
   startDate?: string;
   endDate?: string;
   typeIds?: number[];
+  folderId?: number | null;
   limit?: number;
   order?: 'asc' | 'desc';
 }
@@ -21,6 +22,52 @@ interface NewRecord {
   next_appointment?: string | null;
   referred_to?: string;
   reflected_in_nice?: boolean;
+  folder_id?: number | null;
+}
+
+interface RecordFolder {
+  id: number;
+  name: string;
+  created_at: string;
+  record_count: number;
+}
+
+interface RecordAction {
+  id: number;
+  record_id: number | null;
+  student_id: number | null;
+  text: string;
+  done: number;
+  due_date: string | null;
+  created_at: string;
+  student_name: string | null;
+  record_date: string | null;
+}
+
+interface NewAction {
+  record_id?: number | null;
+  student_id?: number | null;
+  text: string;
+  done?: boolean;
+  due_date?: string | null;
+}
+
+interface StudentDigestRecord {
+  id: number;
+  record_date: string;
+  content: string;
+  state_score: number | null;
+  follow_up_needed: number;
+  follow_up_done: number;
+  type_name: string | null;
+  type_color: string | null;
+}
+
+interface StudentDigest {
+  recent: StudentDigestRecord[];
+  scoreSeries: { record_date: string; state_score: number }[];
+  pendingActions: RecordAction[];
+  last30Count: number;
 }
 
 interface Student {
@@ -96,10 +143,12 @@ interface ConsultRecord {
   next_appointment: string | null;
   referred_to: string;
   reflected_in_nice: number;
+  folder_id: number | null;
   created_at: string;
   student_name: string;
   type_name: string;
   type_color: string;
+  folder_name?: string | null;
 }
 
 interface MonthlyStats {
@@ -195,6 +244,17 @@ interface Window {
     getRecordRelations: (recordId: number) => Promise<RecordRelation[]>;
     setRecordRelations: (recordId: number, relations: RecordRelationInput[]) => Promise<RecordRelation[]>;
     getStudentRelationSummary: (studentId: number) => Promise<StudentRelationSummary>;
+    getStudentDigest: (studentId: number) => Promise<StudentDigest>;
+
+    getFolders: () => Promise<RecordFolder[]>;
+    addFolder: (name: string) => Promise<{ ok: boolean; error?: string; folder?: RecordFolder }>;
+    renameFolder: (id: number, name: string) => Promise<{ ok: boolean; error?: string }>;
+    deleteFolder: (id: number) => Promise<{ ok: boolean }>;
+
+    getActions: (filter?: { recordId?: number; studentId?: number; pendingOnly?: boolean }) => Promise<RecordAction[]>;
+    addAction: (input: NewAction) => Promise<{ ok: boolean; error?: string; action?: RecordAction }>;
+    updateAction: (id: number, patch: { text?: string; done?: boolean; due_date?: string | null }) => Promise<{ ok: boolean; action?: RecordAction }>;
+    deleteAction: (id: number) => Promise<{ ok: boolean }>;
 
     getMonthlyStats: () => Promise<MonthlyStats>;
     getCrisisAlerts: () => Promise<CrisisAlert[]>;
@@ -202,6 +262,10 @@ interface Window {
     getPinnedStudents: () => Promise<Student[]>;
     getUpcomingAppointments: (limit?: number) => Promise<UpcomingAppointment[]>;
     exportAnonymizedReport: () => Promise<{ canceled: boolean; filePath?: string }>;
+    createBackupDialog: () => Promise<{ canceled: boolean; needPassword?: boolean; filePath?: string }>;
+    createBackupWithPassword: (password: string, filePath: string) => Promise<{ ok: boolean; error?: string }>;
+    restoreBackupDialog: () => Promise<{ canceled: boolean; needPassword?: boolean; filePath?: string }>;
+    restoreBackupWithPassword: (password: string, filePath: string) => Promise<{ ok: boolean; error?: string }>;
 
     getAppointmentsInRange: (startDate: string, endDate: string) => Promise<Appointment[]>;
     getAppointmentsForDate: (date: string) => Promise<Appointment[]>;

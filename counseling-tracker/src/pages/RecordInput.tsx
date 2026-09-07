@@ -17,11 +17,13 @@ export default function RecordInput() {
   const [pinned, setPinned] = useState<Student[]>([]);
   const [types, setTypes] = useState<ConsultType[]>([]);
   const [templates, setTemplates] = useState<QuickTemplate[]>([]);
+  const [folders, setFolders] = useState<RecordFolder[]>([]);
 
   const [studentQuery, setStudentQuery] = useState('');
   const [studentId, setStudentId] = useState<number | null>(navState?.studentId ?? null);
   const [date, setDate] = useState(today());
   const [typeId, setTypeId] = useState<number | null>(null);
+  const [folderId, setFolderId] = useState<number | null>(null);
   const [content, setContent] = useState('');
   const [stateScore, setStateScore] = useState<number | null>(null);
   const [prevScore, setPrevScore] = useState<number | null>(null);
@@ -29,6 +31,8 @@ export default function RecordInput() {
   const [referredTo, setReferredTo] = useState<string[]>([]);
   const [reflectedInNice, setReflectedInNice] = useState(false);
   const [relations, setRelations] = useState<RecordRelationInput[]>([]);
+  const [actionText, setActionText] = useState('');
+  const [actionDue, setActionDue] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -37,6 +41,7 @@ export default function RecordInput() {
   useEffect(() => {
     window.api.getStudents().then(setStudents);
     window.api.getPinnedStudents().then(setPinned);
+    window.api.getFolders().then(setFolders);
     window.api.getConsultTypes().then((t) => {
       setTypes(t);
       if (t.length > 0) setTypeId(t[0].id);
@@ -102,10 +107,19 @@ export default function RecordInput() {
         state_score: stateScore,
         follow_up_needed: followUpNeeded,
         referred_to: referredTo.join(','),
-        reflected_in_nice: reflectedInNice
+        reflected_in_nice: reflectedInNice,
+        folder_id: folderId
       });
       if (relations.length > 0) {
         await window.api.setRecordRelations(record.id, relations);
+      }
+      if (actionText.trim()) {
+        await window.api.addAction({
+          record_id: record.id,
+          student_id: studentId,
+          text: actionText.trim(),
+          due_date: actionDue || null
+        });
       }
       setToast('저장되었습니다.');
       setContent('');
@@ -114,6 +128,8 @@ export default function RecordInput() {
       setReferredTo([]);
       setReflectedInNice(false);
       setRelations([]);
+      setActionText('');
+      setActionDue('');
     } finally {
       setSaving(false);
       setTimeout(() => setToast(null), 2500);
@@ -173,7 +189,7 @@ export default function RecordInput() {
                       {filteredStudents.map((s) => (
                         <div
                           key={s.id}
-                          className="sidebar-link"
+                          className="dropdown-item"
                           style={{ cursor: 'pointer' }}
                           onClick={() => {
                             setStudentId(s.id);
@@ -229,6 +245,21 @@ export default function RecordInput() {
             <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               <label className="field-label">날짜</label>
               <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="field">
+              <label className="field-label">상담 폴더</label>
+              <select
+                className="select"
+                value={folderId ?? ''}
+                onChange={(e) => setFolderId(e.target.value === '' ? null : Number(e.target.value))}
+              >
+                <option value="">미분류</option>
+                {folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="field" style={{ marginBottom: templates.length > 0 ? 12 : 0 }}>
@@ -335,6 +366,29 @@ export default function RecordInput() {
                 excludeStudentId={studentId}
                 mainStudentName={selectedStudent?.name}
               />
+            </div>
+
+            <div className="field" style={{ marginBottom: 0, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <label className="field-label">
+                상담 이후 조치사항
+                <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}> · 선택 사항 (예: 보호자 연락, Wee클래스 연계)</span>
+              </label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  className="input"
+                  placeholder="상담 후 할 일을 적어두면 학생·기록 화면에서 추적할 수 있습니다"
+                  value={actionText}
+                  onChange={(e) => setActionText(e.target.value)}
+                />
+                <input
+                  className="input"
+                  type="date"
+                  style={{ width: 140, flexShrink: 0 }}
+                  title="마감일(선택)"
+                  value={actionDue}
+                  onChange={(e) => setActionDue(e.target.value)}
+                />
+              </div>
             </div>
 
             <div

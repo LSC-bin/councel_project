@@ -2,7 +2,9 @@ import initSqlJs, { type Database as SqlJsDatabase, type SqlValue } from 'sql.js
 import { app } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
 import * as XLSX from 'xlsx';
+import { atomicWriteFileSync, decryptBuffer, encryptBuffer, isEncryptedFile, loadOrCreateKey } from './crypto';
 
 export interface RecordFilter {
   studentId?: number;
@@ -10,6 +12,7 @@ export interface RecordFilter {
   startDate?: string;
   endDate?: string;
   typeIds?: number[];
+  folderId?: number | null; // null=미분류 폴더만, 숫자=해당 폴더, undefined=전체
   limit?: number;
   order?: 'asc' | 'desc';
 }
@@ -25,6 +28,7 @@ export interface NewRecord {
   next_appointment?: string | null;
   referred_to?: string;
   reflected_in_nice?: boolean;
+  folder_id?: number | null;
 }
 
 const DEFAULT_TYPES: { name: string; color: string }[] = [
@@ -119,14 +123,32 @@ CREATE TABLE IF NOT EXISTS record_relations (
     relation_score INTEGER,
     note TEXT
 );
+
+CREATE TABLE IF NOT EXISTS record_folders (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS record_actions (
+    id INTEGER PRIMARY KEY,
+    record_id INTEGER REFERENCES consult_records(id),
+    student_id INTEGER REFERENCES students(id),
+    text TEXT NOT NULL,
+    done BOOLEAN DEFAULT 0,
+    due_date DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 let db: SqlJsDatabase;
 let dbFilePath: string;
+let dbKey: Buffer | null = null;
 
 // ---------- 초기화 / 영속화 ----------
 // sql.js는 DB 전체를 메모리에서 다루므로, 쓰기 작업 직후마다 파일로 저장(persist)한다.
 // 상담 기록 관리 프로그램 특성상 데이터량이 크지 않아 매번 저장해도 성능에 무리가 없다.
+// 저장은 AES-256-GCM 암호화 + 원자적 쓰기(임시파일→rename)로 수행한다.
 export async function initDatabase(): Promise<SqlJsDatabase> {
   const SQL = await initSqlJs({
     locateFile: (file) => path.join(require.resolve('sql.js/dist/sql-wasm.wasm'))
@@ -134,11 +156,21 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
 
   const userDataPath = app.getPath('userData');
   if (!fs.existsSync(userDataPath)) fs.mkdirSync(userDataPath, { recursive: true });
-  dbFilePath = path.join(userDataPath, 'counseling.sqlite');
+  dbFilePath = path.join(userDataPath, 'counseling.db.enc');
+  dbKey = loadOrCreateKey(path.join(userDataPath, 'db.key'));
+
+  const legacyPlainPath = path.join(userDataPath, 'counseling.sqlite');
 
   if (fs.existsSync(dbFilePath)) {
-    const buffer = fs.readFileSync(dbFilePath);
+    const blob = fs.readFileSync(dbFilePath);
+    const plain = isEncryptedFile(blob) ? decryptBuffer(blob, dbKey) : blob; // 손상 대비: 평문이면 그대로 읽음
+    db = new SQL.Database(plain);
+  } else if (fs.existsSync(legacyPlainPath)) {
+    // 구버전 평문 DB 자동 이관: 읽어서 암호화 저장 후 원본은 .bak으로 보관
+    const buffer = fs.readFileSync(legacyPlainPath);
     db = new SQL.Database(buffer);
+    persist();
+    fs.renameSync(legacyPlainPath, `${legacyPlainPath}.bak`);
   } else {
     db = new SQL.Database();
   }
@@ -171,6 +203,7 @@ function migrateSchema() {
   addColumn('memo', 'TEXT');
   addColumnTo('record_relations', 'relation_score', 'INTEGER');
   addColumnTo('record_relations', 'note', 'TEXT');
+  addColumnTo('consult_records', 'folder_id', 'INTEGER');
 
   // 예전 방식(기록에 딸린 next_appointment)으로 저장된 예약을 새 appointments 테이블로 1회성 이관.
   // 이미 이관된 기록(record_id로 연결된 예약이 있는 경우)은 건너뛴다.
@@ -188,8 +221,9 @@ function migrateSchema() {
 }
 
 function persist() {
-  const data = db.export();
-  fs.writeFileSync(dbFilePath, Buffer.from(data));
+  const data = Buffer.from(db.export());
+  const blob = dbKey ? encryptBuffer(data, dbKey) : data;
+  atomicWriteFileSync(dbFilePath, blob);
 }
 
 // ---------- 쿼리 헬퍼 ----------
@@ -334,6 +368,12 @@ export function updateStudent(id: number, patch: Partial<NewStudent>) {
 
 // 학생을 삭제하면 해당 학생의 상담 기록도 함께 삭제된다(되돌릴 수 없음, 렌더러에서 확인 후 호출).
 export function deleteStudent(id: number) {
+  db.run(
+    'DELETE FROM record_relations WHERE record_id IN (SELECT id FROM consult_records WHERE student_id = ?)',
+    [id]
+  );
+  db.run('DELETE FROM record_actions WHERE student_id = ? OR record_id IN (SELECT id FROM consult_records WHERE student_id = ?)', [id, id]);
+  db.run('DELETE FROM appointments WHERE student_id = ?', [id]);
   db.run('DELETE FROM consult_records WHERE student_id = ?', [id]);
   db.run('DELETE FROM students WHERE id = ?', [id]);
   persist();
@@ -394,10 +434,11 @@ export function getStudentSummary(id: number) {
 // ---------- 상담 기록 ----------
 export function getRecordById(id: number) {
   return get(
-    `SELECT r.*, s.name as student_name, t.name as type_name, t.color as type_color
+    `SELECT r.*, s.name as student_name, t.name as type_name, t.color as type_color, f.name as folder_name
      FROM consult_records r
      JOIN students s ON s.id = r.student_id
      LEFT JOIN consult_types t ON t.id = r.type_id
+     LEFT JOIN record_folders f ON f.id = r.folder_id
      WHERE r.id = ?`,
     [id]
   );
@@ -427,16 +468,25 @@ export function getRecords(filter: RecordFilter = {}) {
     clauses.push(`r.type_id IN (${filter.typeIds.map(() => '?').join(',')})`);
     params.push(...filter.typeIds);
   }
+  if (filter.folderId !== undefined) {
+    if (filter.folderId === null) {
+      clauses.push('r.folder_id IS NULL');
+    } else {
+      clauses.push('r.folder_id = ?');
+      params.push(filter.folderId);
+    }
+  }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
   const order = filter.order === 'asc' ? 'ASC' : 'DESC';
   const limit = filter.limit ? `LIMIT ${Number(filter.limit)}` : '';
 
   return all(
-    `SELECT r.*, s.name as student_name, t.name as type_name, t.color as type_color
+    `SELECT r.*, s.name as student_name, t.name as type_name, t.color as type_color, f.name as folder_name
      FROM consult_records r
      JOIN students s ON s.id = r.student_id
      LEFT JOIN consult_types t ON t.id = r.type_id
+     LEFT JOIN record_folders f ON f.id = r.folder_id
      ${where}
      ORDER BY r.record_date ${order}, r.id ${order}
      ${limit}`,
@@ -447,8 +497,8 @@ export function getRecords(filter: RecordFilter = {}) {
 export function addRecord(record: NewRecord) {
   db.run(
     `INSERT INTO consult_records
-      (student_id, type_id, record_date, content, state_score, follow_up_needed, next_appointment, referred_to, reflected_in_nice)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (student_id, type_id, record_date, content, state_score, follow_up_needed, next_appointment, referred_to, reflected_in_nice, folder_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.student_id,
       record.type_id,
@@ -458,7 +508,8 @@ export function addRecord(record: NewRecord) {
       record.follow_up_needed ? 1 : 0,
       record.next_appointment ?? null,
       record.referred_to ?? '',
-      record.reflected_in_nice ? 1 : 0
+      record.reflected_in_nice ? 1 : 0,
+      record.folder_id ?? null
     ]
   );
   const id = lastInsertId();
@@ -482,6 +533,7 @@ export function updateRecord(id: number, patch: Partial<NewRecord>) {
 
 export function deleteRecord(id: number) {
   db.run('DELETE FROM record_relations WHERE record_id = ?', [id]);
+  db.run('DELETE FROM record_actions WHERE record_id = ?', [id]);
   db.run('DELETE FROM consult_records WHERE id = ?', [id]);
   persist();
   return { ok: true };
@@ -829,4 +881,199 @@ export function setSetting(key: string, value: string) {
     value
   ]);
   return { ok: true };
+}
+
+// ---------- 백업 / 복원 ----------
+// 백업: 현재 DB 스냅샷을 비밀번호 기반 AES-256-GCM(scrypt 키 유도)으로 암호화한 .backup 파일로 저장.
+// 복원: 비밀번호로 복호화해 성공하면 기존 DB를 대체. 실패(비밀번호 불일치·손상) 시 기존 DB는 그대로 유지.
+export function createBackup(password: string, savePath: string): { ok: boolean; error?: string } {
+  try {
+    const salt = randomBytes(16);
+    const key = scryptSync(password, salt, 32);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const plain = Buffer.from(db.export());
+    const ct = Buffer.concat([cipher.update(plain), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    const blob = Buffer.concat([Buffer.from('CSLBKP1\n', 'ascii'), salt, iv, tag, ct]);
+    atomicWriteFileSync(savePath, blob);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+export function restoreBackup(password: string, filePath: string): { ok: boolean; error?: string } {
+  try {
+    const blob = fs.readFileSync(filePath);
+    const magic = Buffer.from('CSLBKP1\n', 'ascii');
+    if (blob.length < 8 + 16 + 12 + 16 || !blob.subarray(0, 8).equals(magic)) {
+      return { ok: false, error: '백업 파일 형식이 올바르지 않습니다.' };
+    }
+    const salt = blob.subarray(8, 24);
+    const iv = blob.subarray(24, 36);
+    const tag = blob.subarray(36, 52);
+    const ct = blob.subarray(52);
+    const key = scryptSync(password, salt, 32);
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    const plain = Buffer.concat([decipher.update(ct), decipher.final()]); // 비밀번호 불일치 시 여기서 예외
+    const DbCtor = db.constructor as new (data?: Uint8Array) => SqlJsDatabase;
+    db = new DbCtor(plain);
+    db.exec(SCHEMA);
+    migrateSchema();
+    seedDefaults();
+    persist();
+    return { ok: true };
+  } catch (e) {
+    const msg = String(e);
+    if (msg.includes('Unsupported state or unable to authenticate data')) {
+      return { ok: false, error: '비밀번호가 올바르지 않거나 파일이 손상되었습니다.' };
+    }
+    return { ok: false, error: msg };
+  }
+}
+
+// ---------- 상담 폴더 ----------
+export function getFolders() {
+  return all(
+    `SELECT f.*, (SELECT COUNT(*) FROM consult_records r WHERE r.folder_id = f.id) as record_count
+     FROM record_folders f ORDER BY f.name`
+  );
+}
+
+export function addFolder(name: string): { ok: boolean; error?: string; folder?: unknown } {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed) return { ok: false, error: '폴더 이름을 입력하세요.' };
+  const dup = get('SELECT id FROM record_folders WHERE name = ?', [trimmed]);
+  if (dup) return { ok: false, error: '같은 이름의 폴더가 이미 있습니다.' };
+  db.run('INSERT INTO record_folders (name) VALUES (?)', [trimmed]);
+  const id = lastInsertId();
+  persist();
+  return { ok: true, folder: get('SELECT * FROM record_folders WHERE id = ?', [id]) };
+}
+
+export function renameFolder(id: number, name: string): { ok: boolean; error?: string } {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed) return { ok: false, error: '폴더 이름을 입력하세요.' };
+  const dup = get('SELECT id FROM record_folders WHERE name = ? AND id != ?', [trimmed, id]);
+  if (dup) return { ok: false, error: '같은 이름의 폴더가 이미 있습니다.' };
+  run('UPDATE record_folders SET name = ? WHERE id = ?', [trimmed, id]);
+  return { ok: true };
+}
+
+// 폴더 삭제: 안의 기록은 지우지 않고 미분류로 되돌린다(기록 손실 방지).
+export function deleteFolder(id: number) {
+  db.run('UPDATE consult_records SET folder_id = NULL WHERE folder_id = ?', [id]);
+  db.run('DELETE FROM record_folders WHERE id = ?', [id]);
+  persist();
+  return { ok: true };
+}
+
+// ---------- 조치사항(상담 이후 후속 조치) ----------
+export interface NewAction {
+  record_id?: number | null;
+  student_id?: number | null;
+  text: string;
+  done?: boolean;
+  due_date?: string | null;
+}
+
+export function getActions(filter: { recordId?: number; studentId?: number; pendingOnly?: boolean } = {}) {
+  const clauses: string[] = [];
+  const params: SqlValue[] = [];
+  if (filter.recordId) {
+    clauses.push('a.record_id = ?');
+    params.push(filter.recordId);
+  }
+  if (filter.studentId) {
+    clauses.push('a.student_id = ?');
+    params.push(filter.studentId);
+  }
+  if (filter.pendingOnly) clauses.push('a.done = 0');
+  const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+  return all(
+    `SELECT a.*, s.name as student_name, r.record_date
+     FROM record_actions a
+     LEFT JOIN students s ON s.id = a.student_id
+     LEFT JOIN consult_records r ON r.id = a.record_id
+     ${where}
+     ORDER BY a.done ASC, a.due_date IS NULL, a.due_date ASC, a.id DESC`,
+    params
+  );
+}
+
+export function addAction(input: NewAction) {
+  const text = (input.text ?? '').trim();
+  if (!text) return { ok: false as const, error: '조치사항 내용을 입력하세요.' };
+  db.run(
+    'INSERT INTO record_actions (record_id, student_id, text, done, due_date) VALUES (?, ?, ?, ?, ?)',
+    [input.record_id ?? null, input.student_id ?? null, text, input.done ? 1 : 0, input.due_date ?? null]
+  );
+  const id = lastInsertId();
+  persist();
+  return { ok: true as const, action: get('SELECT * FROM record_actions WHERE id = ?', [id]) };
+}
+
+export function updateAction(id: number, patch: { text?: string; done?: boolean; due_date?: string | null }) {
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+  if (patch.text !== undefined) {
+    fields.push('text = ?');
+    values.push(patch.text.trim());
+  }
+  if (patch.done !== undefined) {
+    fields.push('done = ?');
+    values.push(patch.done ? 1 : 0);
+  }
+  if (patch.due_date !== undefined) {
+    fields.push('due_date = ?');
+    values.push(patch.due_date);
+  }
+  if (fields.length > 0) {
+    run(`UPDATE record_actions SET ${fields.join(', ')} WHERE id = ?`, [...values, id]);
+  }
+  return { ok: true as const, action: get('SELECT * FROM record_actions WHERE id = ?', [id]) };
+}
+
+export function deleteAction(id: number) {
+  run('DELETE FROM record_actions WHERE id = ?', [id]);
+  return { ok: true };
+}
+
+// ---------- 학생 상담 다이제스트 ----------
+// 학생 개인 화면용: 이전 상담 내용 간단 정리 + 상태 점수 시계열.
+export function getStudentDigest(studentId: number) {
+  // 최근 기록 5건 (요약 카드용)
+  const recent = all(
+    `SELECT r.id, r.record_date, r.content, r.state_score, r.follow_up_needed, r.follow_up_done,
+            t.name as type_name, t.color as type_color
+     FROM consult_records r
+     LEFT JOIN consult_types t ON t.id = r.type_id
+     WHERE r.student_id = ?
+     ORDER BY r.record_date DESC, r.id DESC
+     LIMIT 5`,
+    [studentId]
+  );
+
+  // 상태 점수 시계열 (그래프용, 오래된 순)
+  const scoreSeries = all<{ record_date: string; state_score: number }>(
+    `SELECT record_date, state_score FROM consult_records
+     WHERE student_id = ? AND state_score IS NOT NULL
+     ORDER BY record_date ASC, id ASC`,
+    [studentId]
+  );
+
+  // 미완료 조치사항
+  const pendingActions = getActions({ studentId, pendingOnly: true });
+
+  // 최근 30일 기록 건수 (위기 신호 참고용)
+  const last30Count = Number(
+    get<{ c: number }>(
+      `SELECT COUNT(*) as c FROM consult_records WHERE student_id = ? AND record_date >= date('now', '-30 days')`,
+      [studentId]
+    )?.c ?? 0
+  );
+
+  return { recent, scoreSeries, pendingActions, last30Count };
 }

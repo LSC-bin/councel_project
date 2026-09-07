@@ -2,17 +2,19 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Avatar,
+  DigestRecent,
   FollowUpStatus,
   InfoRow,
   MiniMetric,
   ProfileFields,
   RelationScoreChart,
-  ScoreTrend,
+  ScoreLineChart,
   StudentFormFields,
   formatClassInfo,
   useProfileFieldState
 } from './studentShared';
 import { EditIcon, TrashIcon } from '../components/icons';
+import ActionList from '../components/ActionList';
 
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -32,8 +34,10 @@ export default function StudentDetail() {
 
   const [summary, setSummary] = useState<StudentSummary | null>(null);
   const [records, setRecords] = useState<ConsultRecord[]>([]);
+  const [digest, setDigest] = useState<StudentDigest | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [relationSummary, setRelationSummary] = useState<StudentRelationSummary | null>(null);
+  const [actionsKey, setActionsKey] = useState(0);
 
   function loadStudent() {
     window.api.getStudentById(studentId).then((s) => {
@@ -60,10 +64,15 @@ export default function StudentDetail() {
 
   function loadHistory() {
     setLoadingHistory(true);
-    Promise.all([window.api.getStudentSummary(studentId), window.api.getRecords({ studentId, order: 'desc' })])
-      .then(([s, r]) => {
+    Promise.all([
+      window.api.getStudentSummary(studentId),
+      window.api.getRecords({ studentId, order: 'desc' }),
+      window.api.getStudentDigest(studentId)
+    ])
+      .then(([s, r, d]) => {
         setSummary(s);
         setRecords(r);
+        setDigest(d);
       })
       .finally(() => setLoadingHistory(false));
     window.api.getStudentRelationSummary(studentId).then(setRelationSummary);
@@ -214,8 +223,8 @@ export default function StudentDetail() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 320px' }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 340px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div className="card">
             <div className="info-grid">
               <InfoRow label="학년도" value={student.school_year} />
@@ -228,90 +237,110 @@ export default function StudentDetail() {
               <InfoRow label="메모" value={student.memo} />
             </div>
 
-            {relationSummary && (relationSummary.students.length > 0 || relationSummary.others.length > 0) && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                <div className="field-label">관계 현황 · {student.name} 학생이 남긴 기록 기준</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {relationSummary.students.map((s) => (
-                    <button
-                      key={s.studentId}
-                      type="button"
-                      className="badge"
-                      style={{ background: 'var(--bg-hover)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}
-                      onClick={() => navigate(`/students/${s.studentId}`)}
-                    >
-                      {s.name} {s.count}회{s.latestScore != null && ` · 최근 ${s.latestScore}점`}
-                    </button>
-                  ))}
-                  {relationSummary.others.map((o) => (
-                    <span key={o.type} className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text)' }}>
-                      {o.type} {o.count}회{o.latestScore != null && ` · 최근 ${o.latestScore}점`}
-                    </span>
-                  ))}
-                </div>
-                <div style={{ marginTop: 10 }}>
-                  <RelationScoreChart summary={relationSummary} />
-                </div>
-              </div>
-            )}
-
             {summary && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 12px' }}>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 12px' }}>
                 <MiniMetric label="총 기록 건수" value={summary.totalCount} />
                 <MiniMetric label="후속조치 대기" value={summary.followUpPending} />
                 <MiniMetric label="생기부 미반영" value={summary.niceUnreflectedCount} />
                 <MiniMetric label="최근 기록일" value={summary.lastRecordDate ?? '-'} />
               </div>
             )}
-
-            {records.some((r) => r.state_score != null) && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                <ScoreTrend records={records} />
-              </div>
-            )}
           </div>
+
+          {digest && (
+            <div className="card">
+              <div className="section-title" style={{ marginBottom: 6 }}>조치사항 (상담 이후 할 일)</div>
+              <ActionList
+                key={actionsKey}
+                studentId={studentId}
+                onChanged={() => {
+                  setActionsKey((k) => k + 1);
+                  loadHistory();
+                }}
+              />
+            </div>
+          )}
+
+          {digest && (
+            <div className="card" style={{ padding: 0 }}>
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+                <span className="section-title" style={{ margin: 0, border: 'none', padding: 0 }}>이전 상담 요약 (최근 5건)</span>
+              </div>
+              <DigestRecent digest={digest} onOpenRecord={(rid) => navigate(`/search/${rid}`)} />
+            </div>
+          )}
         </div>
 
-        <div style={{ flex: '2 1 420px' }}>
-          <div className="section-title">전체 기록</div>
-          <div className="card" style={{ padding: 0 }}>
-            {loadingHistory ? (
-              <div className="empty-state">불러오는 중…</div>
-            ) : records.length === 0 ? (
-              <div className="empty-state" style={{ padding: '24px 10px' }}>
-                아직 기록이 없습니다.
+        <div style={{ flex: '2 1 420px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {digest && <ScoreLineChart series={digest.scoreSeries} />}
+
+          {relationSummary && (relationSummary.students.length > 0 || relationSummary.others.length > 0) && (
+            <div className="card">
+              <div className="field-label">관계 현황 · {student.name} 학생이 남긴 기록 기준</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {relationSummary.students.map((s) => (
+                  <button
+                    key={s.studentId}
+                    type="button"
+                    className="badge badge-link"
+                    style={{ background: 'var(--bg-panel)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                    onClick={() => navigate(`/students/${s.studentId}`)}
+                  >
+                    {s.name} {s.count}회{s.latestScore != null && ` · 최근 ${s.latestScore}점`}
+                  </button>
+                ))}
+                {relationSummary.others.map((o) => (
+                  <span key={o.type} className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                    {o.type} {o.count}회{o.latestScore != null && ` · 최근 ${o.latestScore}점`}
+                  </span>
+                ))}
               </div>
-            ) : (
-              <table className="record-table">
-                <thead>
-                  <tr>
-                    <th>날짜</th>
-                    <th>유형</th>
-                    <th>내용</th>
-                    <th>점수</th>
-                    <th>후속조치</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.map((r) => (
-                    <tr key={r.id}>
-                      <td>{r.record_date}</td>
-                      <td>
-                        <span className="badge" style={{ background: `${r.type_color}22`, color: r.type_color }}>
-                          <span className="badge-dot" style={{ background: r.type_color }} />
-                          {r.type_name}
-                        </span>
-                      </td>
-                      <td>{r.content?.slice(0, 40)}</td>
-                      <td>{r.state_score ?? '-'}</td>
-                      <td>
-                        <FollowUpStatus r={r} />
-                      </td>
+              <div style={{ marginTop: 8 }}>
+                <RelationScoreChart summary={relationSummary} />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <div className="section-title">전체 기록 ({records.length}건)</div>
+            <div className="card" style={{ padding: 0 }}>
+              {loadingHistory ? (
+                <div className="empty-state">불러오는 중…</div>
+              ) : records.length === 0 ? (
+                <div className="empty-state" style={{ padding: '20px 10px' }}>
+                  아직 기록이 없습니다.
+                </div>
+              ) : (
+                <table className="record-table">
+                  <thead>
+                    <tr>
+                      <th>날짜</th>
+                      <th>유형</th>
+                      <th>내용</th>
+                      <th>점수</th>
+                      <th>후속조치</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  </thead>
+                  <tbody>
+                    {records.map((r) => (
+                      <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/search/${r.id}`)}>
+                        <td>{r.record_date}</td>
+                        <td>
+                          <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color, border: `1px solid ${r.type_color}44` }}>
+                            {r.type_name}
+                          </span>
+                        </td>
+                        <td>{r.content?.slice(0, 40)}</td>
+                        <td>{r.state_score ?? '-'}</td>
+                        <td>
+                          <FollowUpStatus r={r} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -54,12 +54,58 @@ export default function Settings() {
 
       <RecordTypeSettings />
 
-      <div className="section">
-        <h2 className="section-title">학년도 전환</h2>
-        <div className="card empty-state">
-          <div className="empty-state-icon">⚙</div>
-          <div>다음 단계에서 구현 예정입니다.</div>
+      <SchoolYearSettings />
+    </div>
+  );
+}
+
+function SchoolYearSettings() {
+  const [yearLabel, setYearLabel] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function handleArchive() {
+    const label = yearLabel.trim();
+    if (!label) {
+      setMessage('아카이브할 학년도를 입력하세요 (예: 2025).');
+      return;
+    }
+    if (
+      !confirm(
+        `현재 등록된 모든 활성 학생을 "${label}학년도"로 아카이브합니다. 기록은 보존되며 학생 목록에서는 숨겨집니다. 진행할까요?`
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      await window.api.archiveCurrentYear(label);
+      setMessage(`${label}학년도 아카이브 완료. 새 명부는 상단 "명부 업로드"로 등록하세요.`);
+      setYearLabel('');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="section">
+      <h2 className="section-title">학년도 전환</h2>
+      <div className="card" style={{ maxWidth: 480 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
+          새 학년이 되면 현재 학생들을 지난 학년도로 아카이브하세요. 상담 기록·조치사항은 모두 보존되고, 학생 목록에서만 숨겨집니다.
+        </p>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            className="input"
+            placeholder="지난 학년도 (예: 2025)"
+            value={yearLabel}
+            onChange={(e) => setYearLabel(e.target.value)}
+            style={{ maxWidth: 180 }}
+          />
+          <button className="btn btn-primary" disabled={busy || !yearLabel.trim()} onClick={handleArchive}>
+            {busy ? '처리 중…' : '새 학년도 시작'}
+          </button>
         </div>
+        {message && <p style={{ color: 'var(--success)', fontSize: 12.5, marginTop: 8, marginBottom: 0 }}>{message}</p>}
       </div>
     </div>
   );
