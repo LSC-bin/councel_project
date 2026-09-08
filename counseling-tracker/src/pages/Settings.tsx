@@ -238,7 +238,7 @@ function RecordTypeSettings() {
               </tbody>
             </table>
           )}
-          <div style={{ display: 'flex', gap: 6, padding: 10, borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: 6, padding: 10 }}>
             <input
               type="color"
               value={newTypeColor}
@@ -303,6 +303,7 @@ const LOCK_TIMEOUT_KEY = 'lock_timeout_minutes';
 
 function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void }) {
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   // 비밀번호가 이미 설정된 경우, 현재 비밀번호를 먼저 확인해야 변경/해제 폼이 열린다.
   const [verified, setVerified] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -319,6 +320,7 @@ function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void
       setHasPassword(v);
       setVerified(!v);
     });
+    window.api.encryptionEnabled().then(setEncryptionEnabled);
     window.api.getSetting(LOCK_TIMEOUT_KEY).then((v) => setLockTimeout(v ?? '0'));
   }
 
@@ -399,11 +401,125 @@ function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void
     onSettingsChanged?.();
   }
 
+  // 기록 암호화 켜기: 새 비밀번호가 곧 앱 진입 비밀번호가 된다.
+  async function handleEnableEncryption() {
+    setError(null);
+    setMessage(null);
+    if (newPassword !== confirmPassword) {
+      setError('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await window.api.enableEncryption(newPassword);
+      if (!result.ok) {
+        setError(result.error ?? '암호화를 켤 수 없습니다.');
+        return;
+      }
+      setMessage('상담 기록 암호화가 켜졌습니다. 다음 실행부터 이 비밀번호로 기록을 엽니다.');
+      resetForm();
+      refresh();
+      onSettingsChanged?.();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // 기록 암호화 끄기: 현재 비밀번호 확인 후 파일 키 방식으로 되돌린다.
+  async function handleDisableEncryption() {
+    setError(null);
+    setMessage(null);
+    if (!confirm('상담 기록 암호화를 해제할까요? 다음 실행부터 비밀번호 없이 기록이 열립니다. (백업 파일 암호화에는 별도 비밀번호를 계속 사용합니다)')) return;
+    setSaving(true);
+    try {
+      const result = await window.api.disableEncryption(currentPassword);
+      if (!result.ok) {
+        setError(result.error ?? '해제에 실패했습니다.');
+        return;
+      }
+      setMessage('상담 기록 암호화가 해제되었습니다.');
+      resetForm();
+      refresh();
+      onSettingsChanged?.();
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (hasPassword === null) return null;
 
+  // ---------- 기록 암호화(진입 비밀번호로 DB 암호화) ----------
   return (
     <div className="section">
-      <h2 className="section-title">앱 잠금</h2>
+      <h2 className="section-title">상담 기록 암호화</h2>
+      <div className="card" style={{ maxWidth: 420 }}>
+        {encryptionEnabled ? (
+          <>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
+              상담 기록이 비밀번호로 암호화되어 있습니다. 프로그램을 열 때마다 비밀번호를 입력해야 기록을 볼 수 있습니다.
+              비밀번호를 잊으면 기록을 복구할 수 없으니 주의하세요.
+            </p>
+            {!verified ? (
+              <>
+                <div className="field">
+                  <label className="field-label">현재 비밀번호</label>
+                  <input
+                    className="input"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+                {error && <p style={{ color: 'var(--danger)', fontSize: 12.5, marginBottom: 10 }}>{error}</p>}
+                {message && <p style={{ color: 'var(--success)', fontSize: 12.5, marginBottom: 10 }}>{message}</p>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-primary" disabled={checking || !currentPassword} onClick={handleVerifyCurrent}>
+                    {checking ? '확인 중…' : '비밀번호 확인'}
+                  </button>
+                  <button className="btn" style={{ color: 'var(--danger)' }} disabled={saving || !currentPassword} onClick={handleDisableEncryption}>
+                    암호화 해제
+                  </button>
+                </div>
+                <p style={{ color: 'var(--text-faint)', fontSize: 12, marginTop: 8, marginBottom: 0 }}>
+                  암호화 해제는 현재 비밀번호 확인 후 진행됩니다. 비밀번호 변경은 아래 "앱 잠금"에서 하면 기록 암호화 비밀번호도 함께 바뀝니다.
+                </p>
+              </>
+            ) : (
+              <>
+                {message && <p style={{ color: 'var(--success)', fontSize: 12.5, marginTop: 0 }}>{message}</p>}
+                <p style={{ color: 'var(--text-faint)', fontSize: 12, marginBottom: 0 }}>
+                  비밀번호가 확인되었습니다. 비밀번호를 변경하려면 아래 "앱 잠금" 섹션을 사용하세요 (기록 암호화 비밀번호도 함께 변경됩니다). 암호화를 해제하려면 앱을 다시 열고 이 화면에서 해제하세요.
+                </p>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
+              비밀번호를 설정하면 상담 기록 전체(DB 파일)가 그 비밀번호로 암호화됩니다.
+              프로그램을 열 때마다 비밀번호를 입력해야 기록을 볼 수 있고, 파일만 복사해서는 내용을 알 수 없습니다.
+            </p>
+            <div className="field">
+              <label className="field-label">진입 비밀번호 (4자 이상)</label>
+              <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </div>
+            <div className="field">
+              <label className="field-label">비밀번호 확인</label>
+              <input className="input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            </div>
+            {error && <p style={{ color: 'var(--danger)', fontSize: 12.5, marginBottom: 10 }}>{error}</p>}
+            {message && <p style={{ color: 'var(--success)', fontSize: 12.5, marginBottom: 10 }}>{message}</p>}
+            <button className="btn btn-primary" disabled={saving || !newPassword} onClick={handleEnableEncryption}>
+              {saving ? '암호화 적용 중…' : '기록 암호화 켜기'}
+            </button>
+            <p style={{ color: 'var(--danger)', fontSize: 12, marginTop: 8, marginBottom: 0 }}>
+              주의: 비밀번호를 잊으면 상담 기록을 복구할 수 없습니다. 반드시 기억할 수 있는 비밀번호를 사용하세요.
+            </p>
+          </>
+        )}
+      </div>
+
+      <h2 className="section-title" style={{ marginTop: 14 }}>앱 잠금</h2>
       <div className="card" style={{ maxWidth: 420 }}>
         {hasPassword && !verified ? (
           <>
@@ -468,7 +584,7 @@ function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void
           </>
         )}
 
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+        <div style={{ marginTop: 14, paddingTop: 12 }}>
           <label className="field-label">자동 잠금 (비밀번호 설정 시에만 동작)</label>
           <select className="select" value={lockTimeout} onChange={(e) => handleLockTimeoutChange(e.target.value)}>
             <option value="0">사용 안 함</option>

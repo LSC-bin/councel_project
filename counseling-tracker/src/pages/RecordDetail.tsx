@@ -156,10 +156,10 @@ export default function RecordDetail() {
         {!editing ? (
           <>
             <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span className="badge" style={{ background: `${record.type_color}18`, color: record.type_color, border: `1px solid ${record.type_color}44` }}>
+              <span className="badge" style={{ background: `${record.type_color}18`, color: record.type_color }}>
                 {record.type_name}
               </span>
-              <span className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+              <span className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)' }}>
                 폴더: {record.folder_name ?? '미분류'}
               </span>
               <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>작성 {record.created_at?.slice(0, 16).replace('T', ' ')}</span>
@@ -175,7 +175,6 @@ export default function RecordDetail() {
                 gap: '8px 12px',
                 fontSize: 12.5,
                 background: 'var(--bg-panel)',
-                border: '1px solid var(--border)',
                 borderRadius: 2,
                 padding: '8px 12px'
               }}
@@ -211,7 +210,7 @@ export default function RecordDetail() {
                         key={r.id}
                         type="button"
                         className="badge badge-link"
-                        style={{ background: 'var(--bg-panel)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                        style={{ background: 'var(--bg-panel)', color: 'var(--text)' }}
                         onClick={() => navigate(`/students/${r.related_student_id}`)}
                         title="학생 프로필로 이동"
                       >
@@ -219,7 +218,7 @@ export default function RecordDetail() {
                         {r.relation_score != null && ` · ${r.relation_score}점`}
                       </button>
                     ) : (
-                      <span key={r.id} className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                      <span key={r.id} className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text)' }}>
                         {r.related_type} · {r.related_label}
                         {r.relation_score != null && ` · ${r.relation_score}점`}
                       </span>
@@ -228,7 +227,7 @@ export default function RecordDetail() {
                 </div>
               </div>
             )}
-            <div className="field" style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+            <div className="field" style={{ paddingTop: 10 }}>
               <ActionList recordId={recordId} studentId={record.student_id} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -357,7 +356,6 @@ export default function RecordDetail() {
             <button
               type="button"
               className="folder-item"
-              style={{ border: '1px solid var(--border)' }}
               onClick={async () => {
                 await window.api.updateRecord(recordId, { folder_id: null });
                 setFolderPicker(false);
@@ -378,7 +376,6 @@ export default function RecordDetail() {
                       type="button"
                       className="folder-item"
                       style={{
-                        border: '1px solid var(--border)',
                         paddingLeft: 8 + depth * 14,
                         background: record?.folder_id === f.id ? 'var(--accent-bg)' : undefined
                       }}

@@ -156,7 +156,6 @@ export default function RecordInput() {
                     alignItems: 'center',
                     gap: 8,
                     padding: '7px 10px',
-                    border: '1px solid var(--accent)',
                     borderRadius: 'var(--radius)',
                     background: 'var(--accent-bg)'
                   }}
@@ -243,7 +242,7 @@ export default function RecordInput() {
               <p style={{ color: 'var(--text-faint)', fontSize: 12, marginTop: 8, marginBottom: 0 }}>직전 상태 점수: {prevScore}점</p>
             )}
 
-            <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <div className="field" style={{ marginTop: 12, paddingTop: 12 }}>
               <label className="field-label">날짜</label>
               <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
@@ -285,7 +284,7 @@ export default function RecordInput() {
             </div>
 
             {templates.length > 0 && (
-              <div className="field" style={{ marginBottom: 0, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <div className="field" style={{ marginBottom: 0, paddingTop: 10 }}>
                 <label className="field-label">빠른 입력 {selectedType && `— ${selectedType.name}`}</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {templates.map((tpl) => (
@@ -312,7 +311,7 @@ export default function RecordInput() {
               />
             </div>
 
-            <div className="field" style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <div className="field" style={{ paddingTop: 12 }}>
               <label className="field-label">
                 상태 점수 (1~5)
                 <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}> · 선택 사항</span>
@@ -359,7 +358,7 @@ export default function RecordInput() {
               </div>
             </div>
 
-            <div className="field" style={{ marginBottom: 0, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+            <div className="field" style={{ marginBottom: 0, paddingTop: 10 }}>
               <label className="field-label">관련 대상 (갈등 상대 등)</label>
               <RelationEditor
                 relations={relations}
@@ -369,7 +368,7 @@ export default function RecordInput() {
               />
             </div>
 
-            <div className="field" style={{ marginBottom: 0, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+            <div className="field" style={{ marginBottom: 0, paddingTop: 10 }}>
               <label className="field-label">
                 상담 이후 조치사항
                 <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}> · 선택 사항 (예: 보호자 연락, Wee클래스 연계)</span>
@@ -400,9 +399,7 @@ export default function RecordInput() {
                 flexWrap: 'wrap',
                 gap: 10,
                 marginTop: 14,
-                paddingTop: 12,
-                borderTop: '1px solid var(--border)'
-              }}
+                paddingTop: 12 }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <button className="btn btn-primary" disabled={saving} onClick={handleSave}>

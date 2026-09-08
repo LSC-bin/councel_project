@@ -242,7 +242,7 @@ export default function StudentDetail() {
             </div>
 
             {summary && (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 12px' }}>
+              <div style={{ marginTop: 10, paddingTop: 10, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 12px' }}>
                 <MiniMetric label="총 기록 건수" value={summary.totalCount} />
                 <MiniMetric label="후속조치 대기" value={summary.followUpPending} />
                 <MiniMetric label="생기부 미반영" value={summary.niceUnreflectedCount} />
@@ -267,7 +267,7 @@ export default function StudentDetail() {
 
           {digest && (
             <div className="card" style={{ padding: 0 }}>
-              <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ padding: '8px 12px' }}>
                 <span className="section-title" style={{ margin: 0, border: 'none', padding: 0 }}>이전 상담 요약 (최근 5건)</span>
               </div>
               <DigestRecent digest={digest} onOpenRecord={(rid) => navigate(`/search/${rid}`)} />
@@ -287,14 +287,14 @@ export default function StudentDetail() {
                     key={s.studentId}
                     type="button"
                     className="badge badge-link"
-                    style={{ background: 'var(--bg-panel)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                    style={{ background: 'var(--bg-panel)', color: 'var(--text)' }}
                     onClick={() => navigate(`/students/${s.studentId}`)}
                   >
                     {s.name} {s.count}회{s.latestScore != null && ` · 최근 ${s.latestScore}점`}
                   </button>
                 ))}
                 {relationSummary.others.map((o) => (
-                  <span key={o.type} className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                  <span key={o.type} className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text)' }}>
                     {o.type} {o.count}회{o.latestScore != null && ` · 최근 ${o.latestScore}점`}
                   </span>
                 ))}
@@ -350,7 +350,7 @@ export default function StudentDetail() {
                       >
                         <td>{r.record_date}</td>
                         <td>
-                          <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color, border: `1px solid ${r.type_color}44` }}>
+                          <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color }}>
                             {r.type_name}
                           </span>
                         </td>

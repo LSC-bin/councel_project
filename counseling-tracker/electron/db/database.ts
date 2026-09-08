@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
 import * as XLSX from 'xlsx';
-import { atomicWriteFileSync, decryptBuffer, encryptBuffer, isEncryptedFile, loadOrCreateKey } from './crypto';
+import { atomicWriteFileSync, decryptBuffer, encryptBuffer, isEncryptedFile, loadOrCreateKey, unwrapKey, wrapKey } from './crypto';
 
 export interface RecordFilter {
   studentId?: number;
@@ -147,42 +147,138 @@ CREATE TABLE IF NOT EXISTS record_actions (
 let db: SqlJsDatabase;
 let dbFilePath: string;
 let dbKey: Buffer | null = null;
+let dbOpen = false;
+let sqlJs: Awaited<ReturnType<typeof initSqlJs>> | null = null;
+
+const WRAPPED_KEY_FILE = 'db.key.wrapped';
+
+function wrappedKeyPath(): string {
+  return path.join(app.getPath('userData'), WRAPPED_KEY_FILE);
+}
 
 // ---------- 초기화 / 영속화 ----------
 // sql.js는 DB 전체를 메모리에서 다루므로, 쓰기 작업 직후마다 파일로 저장(persist)한다.
 // 상담 기록 관리 프로그램 특성상 데이터량이 크지 않아 매번 저장해도 성능에 무리가 없다.
 // 저장은 AES-256-GCM 암호화 + 원자적 쓰기(임시파일→rename)로 수행한다.
-export async function initDatabase(): Promise<SqlJsDatabase> {
-  const SQL = await initSqlJs({
+//
+// 암호화 키는 두 가지 방식으로 관리된다:
+// 1) 기본: 랜덤 마스터 키(db.key, 파일) — 앱 실행 시 자동으로 DB를 연다.
+// 2) 비밀번호 암호화 모드: db.key.wrapped이 있으면 마스터 키가 진입 비밀번호로
+//    래핑(암호화)되어 있어, 비밀번호를 입력(unlockDatabase)해야 DB가 열린다.
+// initDatabase()는 모드 2에서 DB를 열지 않고 false를 반환한다.
+export async function initDatabase(): Promise<boolean> {
+  sqlJs = await initSqlJs({
     locateFile: (file) => path.join(require.resolve('sql.js/dist/sql-wasm.wasm'))
   });
 
   const userDataPath = app.getPath('userData');
   if (!fs.existsSync(userDataPath)) fs.mkdirSync(userDataPath, { recursive: true });
   dbFilePath = path.join(userDataPath, 'counseling.db.enc');
-  dbKey = loadOrCreateKey(path.join(userDataPath, 'db.key'));
 
-  const legacyPlainPath = path.join(userDataPath, 'counseling.sqlite');
+  if (fs.existsSync(wrappedKeyPath())) {
+    // 비밀번호 암호화 모드: 잠금 해제 전까지 DB를 열지 않는다.
+    return false;
+  }
+
+  dbKey = loadOrCreateKey(path.join(userDataPath, 'db.key'));
+  loadDatabaseFromFile();
+  return true;
+}
+
+export function isPasswordEncryptionEnabled(): boolean {
+  return fs.existsSync(wrappedKeyPath());
+}
+
+export function isDatabaseOpen(): boolean {
+  return dbOpen;
+}
+
+// 현재 키(dbKey)로 암호화된 DB 파일을 읽어 연다. 스키마 적용·기본값 시드까지 수행.
+function loadDatabaseFromFile() {
+  if (!sqlJs) throw new Error('sql.js가 초기화되지 않았습니다.');
+  const legacyPlainPath = path.join(app.getPath('userData'), 'counseling.sqlite');
 
   if (fs.existsSync(dbFilePath)) {
     const blob = fs.readFileSync(dbFilePath);
-    const plain = isEncryptedFile(blob) ? decryptBuffer(blob, dbKey) : blob; // 손상 대비: 평문이면 그대로 읽음
-    db = new SQL.Database(plain);
+    const plain = isEncryptedFile(blob) ? decryptBuffer(blob, dbKey!) : blob; // 손상 대비: 평문이면 그대로 읽음
+    db = new sqlJs.Database(plain);
   } else if (fs.existsSync(legacyPlainPath)) {
     // 구버전 평문 DB 자동 이관: 읽어서 암호화 저장 후 원본은 .bak으로 보관
     const buffer = fs.readFileSync(legacyPlainPath);
-    db = new SQL.Database(buffer);
+    db = new sqlJs.Database(buffer);
+    dbKey = dbKey ?? loadOrCreateKey(path.join(app.getPath('userData'), 'db.key'));
     persist();
     fs.renameSync(legacyPlainPath, `${legacyPlainPath}.bak`);
   } else {
-    db = new SQL.Database();
+    db = new sqlJs.Database();
   }
 
   db.exec(SCHEMA);
   migrateSchema();
   seedDefaults();
   persist();
-  return db;
+  dbOpen = true;
+}
+
+// 비밀번호 암호화 모드: 진입 비밀번호로 래핑된 마스터 키를 복원하고 DB를 연다.
+// 비밀번호가 틀리면 GCM 인증에서 실패 → DB는 열리지 않는다.
+export function unlockDatabase(password: string): { ok: boolean; error?: string } {
+  try {
+    const blob = fs.readFileSync(wrappedKeyPath());
+    dbKey = unwrapKey(blob, password);
+    loadDatabaseFromFile();
+    return { ok: true };
+  } catch (e) {
+    const msg = String(e);
+    if (msg.includes('unable to authenticate')) {
+      return { ok: false, error: '비밀번호가 올바르지 않습니다.' };
+    }
+    return { ok: false, error: msg };
+  }
+}
+
+// 비밀번호 암호화 켜기: 새 랜덤 마스터 키로 DB를 재암호화하고,
+// 마스터 키를 비밀번호로 래핑해 db.key.wrapped에 저장한다. 평문 db.key는 삭제한다.
+export function enablePasswordEncryption(password: string): { ok: boolean; error?: string } {
+  try {
+    if (!dbOpen) return { ok: false, error: 'DB가 열려 있지 않습니다.' };
+    const master = randomBytes(32);
+    dbKey = master;
+    persist(); // DB 전체를 새 마스터 키로 재암호화
+    atomicWriteFileSync(wrappedKeyPath(), wrapKey(master, password));
+    const keyFile = path.join(app.getPath('userData'), 'db.key');
+    if (fs.existsSync(keyFile)) fs.rmSync(keyFile); // 평문 키 파일 제거
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+// 비밀번호 변경: 마스터 키는 그대로 두고 새 비밀번호로 다시 래핑만 한다(DB 재암호화 불필요).
+export function changeEncryptionPassword(newPassword: string): { ok: boolean; error?: string } {
+  try {
+    if (!dbOpen || !dbKey) return { ok: false, error: 'DB가 열려 있지 않습니다.' };
+    atomicWriteFileSync(wrappedKeyPath(), wrapKey(dbKey, newPassword));
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+// 비밀번호 암호화 끄기: 새 랜덤 키를 db.key 파일로 되돌리고 래핑 파일을 삭제한다.
+export function disablePasswordEncryption(): { ok: boolean; error?: string } {
+  try {
+    if (!dbOpen) return { ok: false, error: 'DB가 열려 있지 않습니다.' };
+    const newKey = randomBytes(32);
+    const keyFile = path.join(app.getPath('userData'), 'db.key');
+    fs.writeFileSync(keyFile, newKey, { mode: 0o600 });
+    dbKey = newKey;
+    persist(); // DB를 파일 키로 재암호화
+    fs.rmSync(wrappedKeyPath(), { force: true });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
 }
 
 // 이전 버전에서 만들어진 DB에 새 컬럼을 안전하게 추가한다(이미 있으면 건너뜀).

@@ -17,15 +17,27 @@ const LOCK_TIMEOUT_KEY = 'lock_timeout_minutes';
 
 export default function App() {
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  // DB 자체가 비밀번호로 잠겨 있는지(기록 암호화 모드). 이 경우 잠금 화면은
+  // DB를 여는 '진입 비밀번호' 화면이 된다.
+  const [dbLocked, setDbLocked] = useState(false);
   const [locked, setLocked] = useState(false);
   const [lockMinutes, setLockMinutes] = useState<number>(0);
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    Promise.all([window.api.hasPassword(), window.api.getSetting(LOCK_TIMEOUT_KEY)]).then(([hp, v]) => {
-      setHasPassword(hp);
-      setLocked(hp);
-      setLockMinutes(v ? Number(v) || 0 : 0);
+    window.api.bootState().then((boot) => {
+      if (boot.encryptionEnabled && !boot.dbOpen) {
+        // 기록 암호화 모드: DB를 열기 전까지 잠금 화면
+        setDbLocked(true);
+        setHasPassword(true);
+        setLocked(true);
+        return;
+      }
+      setHasPassword(boot.hasPassword);
+      setLocked(boot.hasPassword);
+      if (boot.hasPassword) {
+        window.api.getSetting(LOCK_TIMEOUT_KEY).then((v) => setLockMinutes(v ? Number(v) || 0 : 0));
+      }
     });
   }, []);
 
@@ -60,7 +72,15 @@ export default function App() {
   }
 
   if (locked) {
-    return <LockScreen onUnlock={() => setLocked(false)} />;
+    return (
+      <LockScreen
+        dbLock={dbLocked}
+        onUnlock={() => {
+          setLocked(false);
+          setDbLocked(false);
+        }}
+      />
+    );
   }
 
   return (

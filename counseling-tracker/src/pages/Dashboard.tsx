@@ -169,7 +169,7 @@ export default function Dashboard() {
                         <td style={{ whiteSpace: 'nowrap' }}>{r.record_date.slice(5)}</td>
                         <td>{r.student_name}</td>
                         <td>
-                          <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color, border: `1px solid ${r.type_color}44` }}>
+                          <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color }}>
                             {r.type_name}
                           </span>
                         </td>

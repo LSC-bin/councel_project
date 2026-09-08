@@ -8,7 +8,9 @@ import {
   decryptBuffer,
   encryptBuffer,
   isEncryptedFile,
-  loadOrCreateKey
+  loadOrCreateKey,
+  unwrapKey,
+  wrapKey
 } from '../electron/db/crypto';
 import { hashPassword, verifyPassword } from '../electron/auth';
 
@@ -64,4 +66,18 @@ test('비밀번호 해시: 검증 성공/실패', () => {
   assert.strictEqual(verifyPassword('비밀번호123', 'garbage'), false);
   // 같은 비밀번호여도 salt가 달라 해시는 매번 다르다
   assert.notStrictEqual(stored, hashPassword('비밀번호123'));
+});
+
+test('마스터 키 래핑/언래핑 왕복: 비밀번호로 키가 복원된다', () => {
+  const master = loadOrCreateKey(path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'csel-')), 'mk'));
+  const wrapped = wrapKey(master, '비밀번호1234');
+  assert.ok(!wrapped.includes(master.subarray(8, 24))); // 마스터 키가 그대로 노출되지 않음
+  const restored = unwrapKey(wrapped, '비밀번호1234');
+  assert.deepStrictEqual(restored, master);
+});
+
+test('래핑 키를 잘못된 비밀번호로 열면 실패한다', () => {
+  const master = loadOrCreateKey(path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'csel-')), 'mk'));
+  const wrapped = wrapKey(master, 'right-password');
+  assert.throws(() => unwrapKey(wrapped, 'wrong-password'));
 });

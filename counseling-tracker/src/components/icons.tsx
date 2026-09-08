@@ -97,3 +97,23 @@ export function LockIcon() {
     </svg>
   );
 }
+
+export function DotsIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" stroke="none">
+      <circle cx="8" cy="3" r="1.4" />
+      <circle cx="8" cy="8" r="1.4" />
+      <circle cx="8" cy="13" r="1.4" />
+    </svg>
+  );
+}
+
+export function FilterIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3.5h12" />
+      <path d="M4.5 8h7" />
+      <path d="M6.5 12.5h3" />
+    </svg>
+  );
+}

@@ -79,7 +79,12 @@ const api = {
   getSetting: (key: string) => ipcRenderer.invoke('settings:get', key),
   setSetting: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),
 
-  // 앱 잠금
+  // 앱 잠금 / 기록 암호화
+  bootState: () => ipcRenderer.invoke('auth:bootState'),
+  unlock: (password: string) => ipcRenderer.invoke('auth:unlock', password),
+  enableEncryption: (password: string) => ipcRenderer.invoke('auth:enableEncryption', password),
+  disableEncryption: (currentPassword: string) => ipcRenderer.invoke('auth:disableEncryption', currentPassword),
+  encryptionEnabled: () => ipcRenderer.invoke('auth:encryptionEnabled'),
   hasPassword: () => ipcRenderer.invoke('auth:hasPassword'),
   verifyPassword: (password: string) => ipcRenderer.invoke('auth:verify', password),
   setPassword: (args: { currentPassword?: string; newPassword: string }) => ipcRenderer.invoke('auth:setPassword', args),

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { TrashIcon, EditIcon, FolderIcon, PlusIcon, ChevronRightIcon } from '../components/icons';
+import { FolderIcon, PlusIcon, ChevronRightIcon, DotsIcon } from '../components/icons';
 import { useContextMenu } from '../components/ContextMenu';
 import Modal from '../components/Modal';
 import StudentFilter, { EMPTY_STUDENT_FILTER, type StudentFilterValue } from '../components/StudentFilter';
@@ -154,6 +154,25 @@ export default function SearchView() {
     return childrenOf;
   }, [folders]);
 
+  // 폴더 id → 자기 자신 + 하위 폴더 전체의 기록 수 합계
+  const subtreeCount = (folderId: number): number => {
+    let total = 0;
+    const stack = [folderId];
+    while (stack.length > 0) {
+      const id = stack.pop()!;
+      const f = folders.find((x) => x.id === id);
+      if (f) total += f.record_count;
+      for (const c of folders.filter((x) => (x.parent_id ?? null) === id)) stack.push(c.id);
+    }
+    return total;
+  };
+
+  function openFolder(f: RecordFolder) {
+    setFolderFilter(f.id);
+    // 클릭한 폴더를 트리에 펼쳐 하위 폴더가 바로 보이게 한다.
+    setExpanded((cur) => new Set(cur).add(f.id));
+  }
+
   function renderFolderRow(f: RecordFolder, depth: number): React.ReactNode {
     const kids = folderTree(f.id);
     const isOpen = expanded.has(f.id);
@@ -164,7 +183,6 @@ export default function SearchView() {
             display: 'flex',
             alignItems: 'center',
             background: folderFilter === f.id ? 'var(--accent-bg)' : undefined,
-            borderLeft: folderFilter === f.id ? '3px solid var(--accent)' : '3px solid transparent',
             outline: dropTarget === f.id ? '2px solid var(--accent)' : undefined,
             outlineOffset: -2
           }}
@@ -198,21 +216,7 @@ export default function SearchView() {
             setDragFolderId(null);
             setDropTarget(null);
           }}
-          onContextMenu={(e) =>
-            ctx.open(e, [
-              { label: '이 폴더 열기', onClick: () => setFolderFilter(f.id) },
-              {
-                label: '하위 폴더 만들기',
-                onClick: () => {
-                  setNewFolderParent(f.id);
-                  setNewFolderName('');
-                  setExpanded((cur) => new Set(cur).add(f.id));
-                }
-              },
-              { label: '이름 변경', onClick: () => handleRenameFolder(f) },
-              { label: '폴더 삭제', danger: true, separatorBefore: true, onClick: () => handleDeleteFolder(f) }
-            ])
-          }
+          onContextMenu={(e) => ctx.open(e, folderMenuItems(f))}
         >
           <button
             type="button"
@@ -235,34 +239,43 @@ export default function SearchView() {
           <button
             type="button"
             className="folder-item"
-            style={{ borderLeft: 'none', flex: 1, paddingLeft: 4 }}
-            onClick={() => setFolderFilter(f.id)}
+            style={{ flex: 1, paddingLeft: 4 }}
+            title="이 폴더와 하위 폴더의 기록을 모두 봅니다"
+            onClick={() => openFolder(f)}
           >
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-            <span className="folder-count">{f.record_count}</span>
+            <span className="folder-count">{subtreeCount(f.id)}</span>
           </button>
+          {/* 점3개 메뉴: 폴더 관리(추가·이름 변경·삭제) */}
           <button
+            type="button"
             className="btn-icon"
-            title="하위 폴더 만들기"
-            style={{ width: 20, height: 20 }}
-            onClick={() => {
-              setNewFolderParent(f.id);
-              setNewFolderName('');
-              setExpanded((cur) => new Set(cur).add(f.id));
-            }}
+            style={{ width: 22, height: 22, flexShrink: 0 }}
+            title="폴더 메뉴"
+            onClick={(e) => ctx.open(e, folderMenuItems(f))}
           >
-            <PlusIcon />
-          </button>
-          <button className="btn-icon" title="이름 변경" style={{ width: 20, height: 20 }} onClick={() => handleRenameFolder(f)}>
-            <EditIcon />
-          </button>
-          <button className="btn-icon btn-icon-danger" title="삭제" style={{ width: 20, height: 20 }} onClick={() => handleDeleteFolder(f)}>
-            <TrashIcon />
+            <DotsIcon />
           </button>
         </div>
         {isOpen && kids.map((k) => renderFolderRow(k, depth + 1))}
       </div>
     );
+  }
+
+  function folderMenuItems(f: RecordFolder): import('../components/ContextMenu').ContextMenuItem[] {
+    return [
+      { label: '이 폴더 열기', onClick: () => openFolder(f) },
+      {
+        label: '하위 폴더 만들기',
+        onClick: () => {
+          setNewFolderParent(f.id);
+          setNewFolderName('');
+          setExpanded((cur) => new Set(cur).add(f.id));
+        }
+      },
+      { label: '이름 변경', onClick: () => handleRenameFolder(f) },
+      { label: '폴더 삭제', danger: true, separatorBefore: true, onClick: () => handleDeleteFolder(f) }
+    ];
   }
 
   const rootFolders = folderTree(null);
@@ -387,7 +400,7 @@ export default function SearchView() {
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8, paddingTop: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>정렬</span>
               {SORT_LABELS.map((s) => (
                 <button
@@ -490,7 +503,7 @@ export default function SearchView() {
                           : '-'}
                       </td>
                       <td>
-                        <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color, border: `1px solid ${r.type_color}44` }}>
+                        <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color }}>
                           {r.type_name}
                         </span>
                       </td>
@@ -523,7 +536,6 @@ export default function SearchView() {
             <button
               type="button"
               className="folder-item"
-              style={{ border: '1px solid var(--border)' }}
               onClick={async () => {
                 await window.api.updateRecord(movingRecord.id, { folder_id: null });
                 setMovingRecord(null);
@@ -544,7 +556,7 @@ export default function SearchView() {
                       key={f.id}
                       type="button"
                       className="folder-item"
-                      style={{ border: '1px solid var(--border)', paddingLeft: 8 + depth * 14 }}
+                      style={{ paddingLeft: 8 + depth * 14 }}
                       onClick={async () => {
                         await window.api.updateRecord(movingRecord.id, { folder_id: f.id });
                         setMovingRecord(null);

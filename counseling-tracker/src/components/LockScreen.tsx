@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { LockIcon } from './icons';
 
-export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
+// dbLock=true면 단순 앱 잠금이 아니라 DB 자체가 비밀번호로 암호화된 상태다.
+// 이 경우 비밀번호 검증 대신 unlock(DB 복호화)을 호출한다.
+export default function LockScreen({ onUnlock, dbLock = false }: { onUnlock: () => void; dbLock?: boolean }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
@@ -11,6 +13,16 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
     setChecking(true);
     setError(null);
     try {
+      if (dbLock) {
+        const result = await window.api.unlock(password);
+        if (result.ok) {
+          onUnlock();
+        } else {
+          setError(result.error ?? '비밀번호가 올바르지 않습니다.');
+          setPassword('');
+        }
+        return;
+      }
       const ok = await window.api.verifyPassword(password);
       if (ok) {
         onUnlock();
@@ -39,7 +51,7 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
         </div>
         <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>상담기록관리</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginBottom: 16 }}>
-          잠긴 앱입니다. 비밀번호를 입력하세요.
+          {dbLock ? '상담 기록이 비밀번호로 암호화되어 있습니다. 비밀번호를 입력하세요.' : '잠긴 앱입니다. 비밀번호를 입력하세요.'}
         </p>
         <input
           className="input"

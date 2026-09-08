@@ -329,18 +329,6 @@ export default function RelationGraphView() {
             초기화
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
-          {SCORE_LEGEND.map((l) => (
-            <span key={l.score} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--text-secondary)' }}>
-              <span style={{ width: 18, height: 4, background: edgeColor(l.score), display: 'inline-block' }} />
-              {l.score}점 {l.label}
-            </span>
-          ))}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--text-secondary)' }}>
-            <span style={{ width: 18, height: 4, background: edgeColor(null), display: 'inline-block' }} />
-            점수 없음
-          </span>
-        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -516,7 +504,7 @@ export default function RelationGraphView() {
                     return (
                       <div
                         key={i}
-                        style={{ border: '1px solid var(--border)', borderRadius: 2, padding: '6px 8px', fontSize: 12.5 }}
+                        style={{ borderRadius: 2, padding: '6px 8px', fontSize: 12.5 }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ width: 14, height: 4, background: edgeColor(e.latestScore), display: 'inline-block', flexShrink: 0 }} />
@@ -543,6 +531,20 @@ export default function RelationGraphView() {
             )}
           </div>
         )}
+      </div>
+
+      {/* 선 색 범례: 그래프 아래에 배치 (상단 자리 차지 방지) */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+        {SCORE_LEGEND.map((l) => (
+          <span key={l.score} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--text-secondary)' }}>
+            <span style={{ width: 18, height: 4, background: edgeColor(l.score), display: 'inline-block' }} />
+            {l.score}점 {l.label}
+          </span>
+        ))}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--text-secondary)' }}>
+          <span style={{ width: 18, height: 4, background: edgeColor(null), display: 'inline-block' }} />
+          점수 없음
+        </span>
       </div>
 
       <p style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 6 }}>

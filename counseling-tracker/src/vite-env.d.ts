@@ -326,6 +326,11 @@ interface Window {
     getSetting: (key: string) => Promise<string | null>;
     setSetting: (key: string, value: string) => Promise<{ ok: boolean }>;
 
+    bootState: () => Promise<{ encryptionEnabled: boolean; dbOpen: boolean; hasPassword: boolean }>;
+    unlock: (password: string) => Promise<{ ok: boolean; error?: string }>;
+    enableEncryption: (password: string) => Promise<{ ok: boolean; error?: string }>;
+    disableEncryption: (currentPassword: string) => Promise<{ ok: boolean; error?: string }>;
+    encryptionEnabled: () => Promise<boolean>;
     hasPassword: () => Promise<boolean>;
     verifyPassword: (password: string) => Promise<boolean>;
     setPassword: (args: { currentPassword?: string; newPassword: string }) => Promise<{ ok: boolean; error?: string }>;

@@ -283,7 +283,7 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
         {showProfile ? '보호자·연락처 정보 접기' : '보호자·연락처 정보 입력 (선택)'}
       </button>
       {showProfile && <ProfileFields {...profile} />}
-      <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 10 }}>
         <button className="btn btn-primary" disabled={saving || !name.trim()} onClick={handleAdd}>
           추가
         </button>

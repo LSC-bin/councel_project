@@ -227,7 +227,7 @@ export function RelationEditor({
             <input className="input" placeholder="관계 수준 등 자유롭게 기록" value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10 }}>
             <button type="button" className="btn btn-primary" style={{ fontSize: 12.5 }} disabled={!canSubmit} onClick={handleSubmit}>
               {editIndex != null ? '수정 완료' : '추가'}
             </button>
