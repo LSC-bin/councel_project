@@ -9,12 +9,6 @@ import StudentFilter, { EMPTY_STUDENT_FILTER, type StudentFilterValue } from '..
 type FolderFilter = 'all' | 'none' | number;
 type SortKey = 'date' | 'name' | 'number';
 
-const SORT_LABELS: { key: SortKey; label: string }[] = [
-  { key: 'date', label: '날짜' },
-  { key: 'name', label: '이름' },
-  { key: 'number', label: '학년·반·번호' }
-];
-
 export default function SearchView() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -85,10 +79,6 @@ export default function SearchView() {
     }, 300);
     return () => clearTimeout(timer);
   }, [studentFilter, startDate, endDate, typeIds, folderFilter, sortKey, sortDir]);
-
-  function toggleType(id: number) {
-    setTypeIds((cur) => (cur.includes(id) ? cur.filter((t) => t !== id) : [...cur, id]));
-  }
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -374,7 +364,13 @@ export default function SearchView() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
               <div style={{ flex: '1 1 260px', minWidth: 220 }}>
                 <label className="field-label">학생 찾기</label>
-                <StudentFilter value={studentFilter} onChange={setStudentFilter} />
+                <StudentFilter
+                  value={studentFilter}
+                  onChange={setStudentFilter}
+                  types={types}
+                  typeIds={typeIds}
+                  onTypeIdsChange={setTypeIds}
+                />
               </div>
               <div>
                 <label className="field-label">시작일</label>
@@ -384,38 +380,8 @@ export default function SearchView() {
                 <label className="field-label">종료일</label>
                 <input className="input" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <label className="field-label">유형</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {types.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className={'btn btn-sm' + (typeIds.includes(t.id) ? ' btn-primary' : '')}
-                      onClick={() => toggleType(t.id)}
-                    >
-                      {t.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8, paddingTop: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>정렬</span>
-              {SORT_LABELS.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  className={'btn btn-sm' + (sortKey === s.key ? ' btn-primary' : '')}
-                  onClick={() => toggleSort(s.key)}
-                  title={`${s.label} 기준 정렬 (다시 누르면 방향 전환)`}
-                >
-                  {s.label}
-                  {sortKey === s.key && <span style={{ marginLeft: 3 }}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
-                </button>
-              ))}
-              <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
-                {sortDir === 'asc' ? '오름차순' : '내림차순'} · 결과 {records.length}건
+              <span style={{ fontSize: 11.5, color: 'var(--text-faint)', marginLeft: 'auto' }}>
+                결과 {records.length}건 · 열 머리글 클릭으로 정렬
               </span>
             </div>
           </div>
