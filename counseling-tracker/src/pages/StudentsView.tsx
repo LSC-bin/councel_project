@@ -4,13 +4,26 @@ import { Avatar, ProfileFields, StudentFormFields, formatClassInfo, useProfileFi
 import { PinIcon, PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import { useContextMenu } from '../components/ContextMenu';
+import StudentFilter, { EMPTY_STUDENT_FILTER, applyStudentFilter, type StudentFilterValue } from '../components/StudentFilter';
+
+type SortKey = 'name' | 'schoolYear' | 'grade' | 'classNo' | 'number';
+
+const COLUMNS: { key: SortKey; label: string }[] = [
+  { key: 'name', label: '이름' },
+  { key: 'schoolYear', label: '학년도' },
+  { key: 'grade', label: '학년' },
+  { key: 'classNo', label: '반' },
+  { key: 'number', label: '번호' }
+];
 
 export default function StudentsView() {
   const navigate = useNavigate();
   const ctx = useContextMenu();
 
   const [students, setStudents] = useState<StudentWithStats[]>([]);
-  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<StudentFilterValue>(EMPTY_STUDENT_FILTER);
+  const [sortKey, setSortKey] = useState<SortKey>('grade');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -28,10 +41,40 @@ export default function StudentsView() {
     refresh();
   }, []);
 
-  const filtered = useMemo(() => {
-    if (!query) return students;
-    return students.filter((s) => s.name.includes(query) || String(s.number ?? '').includes(query));
-  }, [students, query]);
+  const filtered = useMemo(() => applyStudentFilter(students, filter), [students, filter]);
+
+  const sorted = useMemo(() => {
+    const val = (s: StudentWithStats): string | number => {
+      switch (sortKey) {
+        case 'name':
+          return s.name;
+        case 'schoolYear':
+          return s.school_year ?? '';
+        case 'grade':
+          return s.grade ?? 999;
+        case 'classNo':
+          return s.class_no ?? 999;
+        case 'number':
+          return s.number ?? 999;
+      }
+    };
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return filtered.slice().sort((a, b) => {
+      const va = val(a);
+      const vb = val(b);
+      if (typeof va === 'string' && typeof vb === 'string') return va.localeCompare(vb, 'ko') * dir;
+      return ((va as number) - (vb as number)) * dir;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
 
   async function handleExcelImport() {
     setImporting(true);
@@ -68,17 +111,15 @@ export default function StudentsView() {
     <div>
       <div className="page-header">
         <h1 className="page-title">학생 관리</h1>
-        <p className="page-subtitle">학생 정보를 확인·수정하고, 학생별 전체 기록을 한눈에 봅니다. 행을 우클릭하면 빠른 메뉴가 열립니다.</p>
+        <p className="page-subtitle">
+          학생 정보를 확인·수정하고, 학생별 전체 기록을 한눈에 봅니다. 열 제목을 눌러 정렬하고, 행을 우클릭하면 빠른 메뉴가 열립니다.
+        </p>
       </div>
 
       <div className="card" style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
-          className="input"
-          style={{ flex: '1 1 200px' }}
-          placeholder="이름 또는 번호 검색"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <div style={{ flex: '1 1 260px', minWidth: 220 }}>
+          <StudentFilter value={filter} onChange={setFilter} />
+        </div>
         <button className="btn" style={{ whiteSpace: 'nowrap' }} disabled={importing} onClick={handleExcelImport} title="엑셀 파일로 학생을 일괄 등록합니다">
           {importing ? '가져오는 중…' : '엑셀 일괄 등록'}
         </button>
@@ -116,7 +157,7 @@ export default function StudentsView() {
       <div className="card" style={{ padding: 0 }}>
         {loading ? (
           <div className="empty-state">불러오는 중…</div>
-        ) : filtered.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div className="empty-state">
             <div>{students.length === 0 ? '등록된 학생이 없습니다.' : '검색 결과가 없습니다.'}</div>
           </div>
@@ -124,15 +165,17 @@ export default function StudentsView() {
           <table className="record-table">
             <thead>
               <tr>
-                <th>이름</th>
-                <th>학년도</th>
-                <th>학년/반/번호</th>
+                {COLUMNS.map((c) => (
+                  <th key={c.key} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => toggleSort(c.key)} title={`${c.label} 정렬 (다시 누르면 방향 전환)`}>
+                    {c.label} {sortKey === c.key && (sortDir === 'asc' ? '↑' : '↓')}
+                  </th>
+                ))}
                 <th>기록 건수</th>
                 <th>최근 기록</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s) => (
+              {sorted.map((s) => (
                 <tr
                   key={s.id}
                   style={{ cursor: 'pointer' }}
@@ -159,7 +202,9 @@ export default function StudentsView() {
                     </div>
                   </td>
                   <td>{s.school_year ?? '-'}</td>
-                  <td>{formatClassInfo(s)}</td>
+                  <td>{s.grade != null ? `${s.grade}학년` : '-'}</td>
+                  <td>{s.class_no != null ? `${s.class_no}반` : '-'}</td>
+                  <td>{s.number != null ? `${s.number}번` : '-'}</td>
                   <td>{s.record_count}</td>
                   <td>{s.last_record_date ?? '-'}</td>
                 </tr>
@@ -168,6 +213,9 @@ export default function StudentsView() {
           </table>
         )}
       </div>
+      <p style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 6 }}>
+        {sorted.length}명 표시 중 · 정렬: {COLUMNS.find((c) => c.key === sortKey)?.label} {sortDir === 'asc' ? '오름차순' : '내림차순'}
+      </p>
       {ctx.element}
     </div>
   );

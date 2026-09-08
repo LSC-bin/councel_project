@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContextMenu } from '../components/ContextMenu';
+import StudentFilter, { EMPTY_STUDENT_FILTER, applyStudentFilter, type StudentFilterValue } from '../components/StudentFilter';
 
 // 관계 점수(1~5) → 엣지 색. 1=빨강(갈등) … 5=초록(친밀). 점수 없으면 회색.
 export function edgeColor(score: number | null) {
@@ -110,7 +111,7 @@ export default function RelationGraphView() {
   const navigate = useNavigate();
   const ctx = useContextMenu();
   const [graph, setGraph] = useState<RelationGraph | null>(null);
-  const [query, setQuery] = useState('');
+  const [studentFilter, setStudentFilter] = useState<StudentFilterValue>(EMPTY_STUDENT_FILTER);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [hoverEdge, setHoverEdge] = useState<number | null>(null);
   const [conflictFilter, setConflictFilter] = useState<ConflictFilter>('all');
@@ -126,16 +127,32 @@ export default function RelationGraphView() {
   const W = 900;
   const H = 560;
 
-  // 검색어 필터: 해당 학생이 포함된 엣지만
+  // 학생 필터: 조건에 맞는 학생이 포함된 엣지만
+  const filteredNodeIds = useMemo(() => {
+    if (!graph) return null;
+    const q = studentFilter.query.trim();
+    const active = q !== '' || studentFilter.grade !== '' || studentFilter.classNo !== '';
+    if (!active) return null;
+    const ids = new Set<number>();
+    for (const n of graph.nodes) {
+      if (q && !n.name.includes(q) && !String(n.number ?? '').includes(q)) continue;
+      if (studentFilter.grade !== '' && n.grade !== Number(studentFilter.grade)) continue;
+      if (studentFilter.classNo !== '' && n.classNo !== Number(studentFilter.classNo)) continue;
+      ids.add(n.id);
+    }
+    return ids;
+  }, [graph, studentFilter]);
+
+  const filterActive = filteredNodeIds != null;
+
   const filteredEdges = useMemo(() => {
     if (!graph) return [];
     let edges = graph.edges;
-    const q = query.trim();
-    if (q) edges = edges.filter((e) => e.aName.includes(q) || e.bName.includes(q));
+    if (filteredNodeIds) edges = edges.filter((e) => filteredNodeIds.has(e.a) || filteredNodeIds.has(e.b));
     if (conflictFilter === 'conflict') edges = edges.filter((e) => e.latestScore != null && e.latestScore <= 2);
     if (conflictFilter === 'positive') edges = edges.filter((e) => e.latestScore != null && e.latestScore >= 4);
     return edges;
-  }, [graph, query, conflictFilter]);
+  }, [graph, filteredNodeIds, conflictFilter]);
 
   // 선택 학생 필터: 그 학생과 직접 연결된 엣지만
   const visibleEdges = useMemo(() => {
@@ -181,10 +198,10 @@ export default function RelationGraphView() {
   }, [graph, selectedId]);
 
   const matchedStudents = useMemo(() => {
-    const q = query.trim();
+    const q = studentFilter.query.trim();
     if (!q || !graph) return [];
     return graph.nodes.filter((n) => n.name.includes(q)).slice(0, 8);
-  }, [query, graph]);
+  }, [studentFilter.query, graph]);
 
   // SVG 좌표 변환(줌 반영)
   function toSvgCoords(clientX: number, clientY: number): Layout | null {
@@ -239,16 +256,8 @@ export default function RelationGraphView() {
       </div>
 
       <div className="card" style={{ marginBottom: 8, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 300 }}>
-          <input
-            className="input"
-            placeholder="학생 이름 검색 (예: 김민준)"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelectedId(null);
-            }}
-          />
+        <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 240 }}>
+          <StudentFilter value={studentFilter} onChange={(v) => { setStudentFilter(v); setSelectedId(null); }} />
           {matchedStudents.length > 0 && selectedId == null && (
             <div className="card" style={{ position: 'absolute', zIndex: 10, marginTop: 4, padding: 4, width: '100%' }}>
               {matchedStudents.map((s) => (
@@ -256,22 +265,27 @@ export default function RelationGraphView() {
                   key={s.id}
                   className="dropdown-item"
                   onClick={() => {
-                    setQuery(s.name);
+                    setStudentFilter((f) => ({ ...f, query: s.name }));
                     setSelectedId(s.id);
                   }}
                 >
                   {s.name}
+                  {(s.grade != null || s.classNo != null || s.number != null) && (
+                    <span style={{ color: 'var(--text-faint)' }}>
+                      · {[s.grade != null ? `${s.grade}학년` : null, s.classNo != null ? `${s.classNo}반` : null, s.number != null ? `${s.number}번` : null].filter(Boolean).join(' ')}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
-        {(selectedId != null || query.trim()) && (
+        {(selectedId != null || filterActive) && (
           <button
             className="btn btn-sm"
             onClick={() => {
               setSelectedId(null);
-              setQuery('');
+              setStudentFilter(EMPTY_STUDENT_FILTER);
             }}
           >
             전체 그래프로
@@ -462,6 +476,20 @@ export default function RelationGraphView() {
                     >
                       {n.name}
                     </text>
+                    {(n.grade != null || n.classNo != null || n.number != null) && (
+                      <text
+                        x={p.x}
+                        y={p.y + r + 26}
+                        textAnchor="middle"
+                        fontSize={9.5}
+                        fill="var(--text-faint)"
+                        style={{ paintOrder: 'stroke', stroke: 'var(--bg-card)', strokeWidth: 3, pointerEvents: 'none' }}
+                      >
+                        {[n.grade != null ? `${n.grade}학년` : null, n.classNo != null ? `${n.classNo}반` : null, n.number != null ? `${n.number}번` : null]
+                          .filter(Boolean)
+                          .join(' ')}
+                      </text>
+                    )}
                   </g>
                 );
               })}

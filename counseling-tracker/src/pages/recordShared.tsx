@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { scoreColor } from './studentShared';
 import { CloseIcon } from '../components/icons';
+import Modal from '../components/Modal';
 
 const RELATED_TYPES: RelatedType[] = ['학생', '보호자', '교사', '기타'];
 
 // 상담/기록에서 "누구와의 갈등·관계인지"를 선택하는 공통 위젯.
 // 학생끼리의 갈등이면 상대 학생을 검색해서 선택하고, 보호자·교사·기타면 자유 텍스트로 남긴다.
-// 이미 추가된 항목은 칩을 클릭하면 그 자리에서 점수·비고를 수정할 수 있다(지웠다가 다시 추가할 필요 없음).
+// 추가·수정은 모달 창에서 입력한다(인라인 폼 대신).
 // 관계 점수는 항상 "이 기록의 학생(mainStudentName)이 상대를 어떻게 느끼는지"를 나타낸다 (그 반대가 아님).
 export function RelationEditor({
   relations,
@@ -30,10 +31,11 @@ export function RelationEditor({
   const [note, setNote] = useState('');
 
   useEffect(() => {
-    if (adding && type === '학생' && students.length === 0) {
+    if ((adding || relations.some((r) => r.related_type === '학생')) && students.length === 0) {
       window.api.getStudents().then(setStudents);
     }
-  }, [adding, type, students.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adding, relations, students.length]);
 
   const filtered = query && !pickedStudentId ? students.filter((s) => s.id !== excludeStudentId && s.name.includes(query)).slice(0, 6) : [];
 
@@ -95,13 +97,7 @@ export function RelationEditor({
     return r.related_label ?? r.related_type;
   }
 
-  // 라벨 표시용으로 학생 목록을 미리 불러와둔다(칩에 이름을 보여주기 위함).
-  useEffect(() => {
-    if (relations.some((r) => r.related_type === '학생') && students.length === 0) {
-      window.api.getStudents().then(setStudents);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relations]);
+  const canSubmit = type === '학생' ? pickedStudentId != null : label.trim() !== '';
 
   return (
     <div>
@@ -128,14 +124,13 @@ export function RelationEditor({
         </div>
       )}
 
-      {!adding ? (
-        <button type="button" className="btn" style={{ fontSize: 12.5 }} onClick={startAdd}>
-          + 관련 대상 추가
-        </button>
-      ) : (
-        <div className="card" style={{ background: 'var(--bg-hover)', marginTop: 4 }}>
-          {editIndex != null && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>관계 수정 중</div>}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+      <button type="button" className="btn" style={{ fontSize: 12.5 }} onClick={startAdd}>
+        + 관련 대상 추가
+      </button>
+
+      {adding && (
+        <Modal title={editIndex != null ? '관련 대상 수정' : '관련 대상 추가'} onClose={resetForm} maxWidth={440}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
             {RELATED_TYPES.map((t) => (
               <button
                 key={t}
@@ -155,40 +150,52 @@ export function RelationEditor({
             ))}
           </div>
 
-          {type === '학생' ? (
-            <div style={{ position: 'relative' }}>
-              <input
-                className="input"
-                placeholder="상대 학생 이름 검색"
-                value={pickedStudentId ? students.find((s) => s.id === pickedStudentId)?.name ?? '' : query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPickedStudentId(null);
-                }}
-              />
-              {filtered.length > 0 && (
-                <div className="card" style={{ position: 'absolute', zIndex: 10, marginTop: 4, padding: 4, width: '100%' }}>
-                  {filtered.map((s) => (
-                    <div
-                      key={s.id}
-                      className="dropdown-item"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => {
-                        setPickedStudentId(s.id);
-                        setQuery('');
-                      }}
-                    >
-                      {s.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <input className="input" placeholder={`${type} 설명 (예: 3반 담임교사)`} value={label} onChange={(e) => setLabel(e.target.value)} />
-          )}
+          <div className="field">
+            {type === '학생' ? (
+              <div style={{ position: 'relative' }}>
+                <label className="field-label">상대 학생</label>
+                <input
+                  className="input"
+                  placeholder="상대 학생 이름 검색"
+                  value={pickedStudentId ? students.find((s) => s.id === pickedStudentId)?.name ?? '' : query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setPickedStudentId(null);
+                  }}
+                  autoFocus
+                />
+                {filtered.length > 0 && (
+                  <div className="card" style={{ position: 'absolute', zIndex: 10, marginTop: 4, padding: 4, width: '100%' }}>
+                    {filtered.map((s) => (
+                      <div
+                        key={s.id}
+                        className="dropdown-item"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          setPickedStudentId(s.id);
+                          setQuery('');
+                        }}
+                      >
+                        {s.name}
+                        {(s.grade != null || s.class_no != null || s.number != null) && (
+                          <span style={{ color: 'var(--text-faint)' }}>
+                            · {[s.grade != null ? `${s.grade}학년` : null, s.class_no != null ? `${s.class_no}반` : null, s.number != null ? `${s.number}번` : null].filter(Boolean).join(' ')}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="field-label">{type} 설명</label>
+                <input className="input" placeholder={`예: 3반 담임교사`} value={label} onChange={(e) => setLabel(e.target.value)} autoFocus />
+              </div>
+            )}
+          </div>
 
-          <div style={{ marginTop: 8 }}>
+          <div className="field">
             <label className="field-label">
               {mainStudentName ?? '이 학생'}이(가) 상대를 어떻게 느끼는지 (1=갈등·나쁨 ~ 5=친밀·좋음, 선택)
             </label>
@@ -215,20 +222,20 @@ export function RelationEditor({
             </div>
           </div>
 
-          <div style={{ marginTop: 8 }}>
+          <div className="field">
             <label className="field-label">비고</label>
             <input className="input" placeholder="관계 수준 등 자유롭게 기록" value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-            <button type="button" className="btn btn-primary" style={{ fontSize: 12.5 }} onClick={handleSubmit}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+            <button type="button" className="btn btn-primary" style={{ fontSize: 12.5 }} disabled={!canSubmit} onClick={handleSubmit}>
               {editIndex != null ? '수정 완료' : '추가'}
             </button>
             <button type="button" className="btn" style={{ fontSize: 12.5 }} onClick={resetForm}>
               취소
             </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

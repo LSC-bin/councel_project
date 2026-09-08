@@ -28,8 +28,10 @@ const api = {
 
   // 폴더
   getFolders: () => ipcRenderer.invoke('folders:get'),
-  addFolder: (name: string) => ipcRenderer.invoke('folders:add', name),
+  addFolder: (name: string, parentId?: number | null) => ipcRenderer.invoke('folders:add', name, parentId ?? null),
   renameFolder: (id: number, name: string) => ipcRenderer.invoke('folders:rename', id, name),
+  moveFolder: (id: number, targetParentId: number | null, beforeFolderId: number | null) =>
+    ipcRenderer.invoke('folders:move', id, targetParentId, beforeFolderId),
   deleteFolder: (id: number) => ipcRenderer.invoke('folders:delete', id),
 
   // 조치사항

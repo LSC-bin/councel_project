@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RelationEditor } from './recordShared';
-import { TrashIcon, BackIcon, CalendarIcon } from '../components/icons';
+import { TrashIcon, BackIcon, CalendarIcon, FolderIcon } from '../components/icons';
 import { Avatar, formatClassInfo } from './studentShared';
 import ActionList from '../components/ActionList';
+import Modal from '../components/Modal';
 
 const REFERRAL_OPTIONS = ['Wee클래스', '학폭담당', '보건교사', '학부모', '기타'];
 
@@ -18,6 +19,7 @@ export default function RecordDetail() {
   const [types, setTypes] = useState<ConsultType[]>([]);
   const [folders, setFolders] = useState<RecordFolder[]>([]);
   const [editing, setEditing] = useState(false);
+  const [folderPicker, setFolderPicker] = useState(false);
 
   const [typeId, setTypeId] = useState<number>(0);
   const [folderId, setFolderId] = useState<number | null>(null);
@@ -233,6 +235,9 @@ export default function RecordDetail() {
               <button className="btn btn-primary" onClick={() => setEditing(true)}>
                 수정
               </button>
+              <button className="btn" onClick={() => setFolderPicker(true)}>
+                <FolderIcon /> 폴더에 넣기
+              </button>
               <button
                 className="btn"
                 onClick={() => navigate('/', { state: { studentId: record.student_id, studentName: record.student_name } })}
@@ -342,6 +347,60 @@ export default function RecordDetail() {
           </>
         )}
       </div>
+
+      {folderPicker && (
+        <Modal title="상담 폴더에 넣기" onClose={() => setFolderPicker(false)} maxWidth={360}>
+          <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 0 }}>
+            {record?.record_date} · {record?.student_name} 기록을 넣을 폴더를 선택하세요.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 320, overflowY: 'auto' }}>
+            <button
+              type="button"
+              className="folder-item"
+              style={{ border: '1px solid var(--border)' }}
+              onClick={async () => {
+                await window.api.updateRecord(recordId, { folder_id: null });
+                setFolderPicker(false);
+                loadRecord();
+              }}
+            >
+              미분류
+            </button>
+            {(() => {
+              const rows: React.ReactNode[] = [];
+              const walk = (parentId: number | null, depth: number) => {
+                for (const f of folders
+                  .filter((x) => (x.parent_id ?? null) === parentId)
+                  .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || a.name.localeCompare(b.name))) {
+                  rows.push(
+                    <button
+                      key={f.id}
+                      type="button"
+                      className="folder-item"
+                      style={{
+                        border: '1px solid var(--border)',
+                        paddingLeft: 8 + depth * 14,
+                        background: record?.folder_id === f.id ? 'var(--accent-bg)' : undefined
+                      }}
+                      onClick={async () => {
+                        await window.api.updateRecord(recordId, { folder_id: f.id });
+                        setFolderPicker(false);
+                        loadRecord();
+                      }}
+                    >
+                      {f.name}
+                      {record?.folder_id === f.id && <span className="folder-count">현재</span>}
+                    </button>
+                  );
+                  walk(f.id, depth + 1);
+                }
+              };
+              walk(null, 0);
+              return rows;
+            })()}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

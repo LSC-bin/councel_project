@@ -3,11 +3,14 @@
 interface RecordFilter {
   studentId?: number;
   studentQuery?: string;
+  grade?: number | null;
+  classNo?: number | null;
   startDate?: string;
   endDate?: string;
   typeIds?: number[];
   folderId?: number | null;
   limit?: number;
+  sortBy?: 'date' | 'name' | 'number';
   order?: 'asc' | 'desc';
 }
 
@@ -30,6 +33,8 @@ interface RecordFolder {
   name: string;
   created_at: string;
   record_count: number;
+  parent_id: number | null;
+  sort_order: number | null;
 }
 
 interface RecordAction {
@@ -78,7 +83,7 @@ interface RelationEdge {
 }
 
 interface RelationGraph {
-  nodes: { id: number; name: string }[];
+  nodes: { id: number; name: string; grade: number | null; classNo: number | null; number: number | null }[];
   edges: RelationEdge[];
 }
 
@@ -168,6 +173,9 @@ interface ConsultRecord {
   type_name: string;
   type_color: string;
   folder_name?: string | null;
+  student_grade?: number | null;
+  student_class_no?: number | null;
+  student_number?: number | null;
 }
 
 interface MonthlyStats {
@@ -268,8 +276,9 @@ interface Window {
     getRelationGraph: () => Promise<RelationGraph>;
 
     getFolders: () => Promise<RecordFolder[]>;
-    addFolder: (name: string) => Promise<{ ok: boolean; error?: string; folder?: RecordFolder }>;
+    addFolder: (name: string, parentId?: number | null) => Promise<{ ok: boolean; error?: string; folder?: RecordFolder }>;
     renameFolder: (id: number, name: string) => Promise<{ ok: boolean; error?: string }>;
+    moveFolder: (id: number, targetParentId: number | null, beforeFolderId: number | null) => Promise<{ ok: boolean; error?: string }>;
     deleteFolder: (id: number) => Promise<{ ok: boolean }>;
 
     getActions: (filter?: { recordId?: number; studentId?: number; pendingOnly?: boolean }) => Promise<RecordAction[]>;

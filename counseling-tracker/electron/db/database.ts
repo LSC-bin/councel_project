@@ -9,11 +9,14 @@ import { atomicWriteFileSync, decryptBuffer, encryptBuffer, isEncryptedFile, loa
 export interface RecordFilter {
   studentId?: number;
   studentQuery?: string;
+  grade?: number | null;
+  classNo?: number | null;
   startDate?: string;
   endDate?: string;
   typeIds?: number[];
-  folderId?: number | null; // null=미분류 폴더만, 숫자=해당 폴더, undefined=전체
+  folderId?: number | null; // null=미분류 폴더만, 숫자=해당 폴더(+하위 폴더), undefined=전체
   limit?: number;
+  sortBy?: 'date' | 'name' | 'number';
   order?: 'asc' | 'desc';
 }
 
@@ -204,6 +207,8 @@ function migrateSchema() {
   addColumnTo('record_relations', 'relation_score', 'INTEGER');
   addColumnTo('record_relations', 'note', 'TEXT');
   addColumnTo('consult_records', 'folder_id', 'INTEGER');
+  addColumnTo('record_folders', 'parent_id', 'INTEGER');
+  addColumnTo('record_folders', 'sort_order', 'INTEGER');
 
   // 예전 방식(기록에 딸린 next_appointment)으로 저장된 예약을 새 appointments 테이블로 1회성 이관.
   // 이미 이관된 기록(record_id로 연결된 예약이 있는 경우)은 건너뛴다.
@@ -519,6 +524,14 @@ export function getRecords(filter: RecordFilter = {}) {
     clauses.push('s.name LIKE ?');
     params.push(`%${filter.studentQuery}%`);
   }
+  if (filter.grade !== undefined) {
+    clauses.push('s.grade IS ?');
+    params.push(filter.grade);
+  }
+  if (filter.classNo !== undefined) {
+    clauses.push('s.class_no IS ?');
+    params.push(filter.classNo);
+  }
   if (filter.startDate) {
     clauses.push('r.record_date >= ?');
     params.push(filter.startDate);
@@ -535,23 +548,32 @@ export function getRecords(filter: RecordFilter = {}) {
     if (filter.folderId === null) {
       clauses.push('r.folder_id IS NULL');
     } else {
-      clauses.push('r.folder_id = ?');
-      params.push(filter.folderId);
+      // 선택 폴더와 그 하위 폴더의 기록까지 포함
+      const ids = getFolderSubtreeIds(filter.folderId);
+      clauses.push(`r.folder_id IN (${ids.map(() => '?').join(',')})`);
+      params.push(...ids);
     }
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
-  const order = filter.order === 'asc' ? 'ASC' : 'DESC';
+  const dir = filter.order === 'asc' ? 'ASC' : 'DESC';
+  const sortExpr =
+    filter.sortBy === 'name'
+      ? `s.name ${dir}, s.grade ${dir}, s.class_no ${dir}, s.number ${dir}, r.record_date ${dir}`
+      : filter.sortBy === 'number'
+        ? `s.grade ${dir}, s.class_no ${dir}, s.number ${dir}, s.name ${dir}, r.record_date ${dir}`
+        : `r.record_date ${dir}, r.id ${dir}`;
   const limit = filter.limit ? `LIMIT ${Number(filter.limit)}` : '';
 
   return all(
-    `SELECT r.*, s.name as student_name, t.name as type_name, t.color as type_color, f.name as folder_name
+    `SELECT r.*, s.name as student_name, s.grade as student_grade, s.class_no as student_class_no, s.number as student_number,
+            t.name as type_name, t.color as type_color, f.name as folder_name
      FROM consult_records r
      JOIN students s ON s.id = r.student_id
      LEFT JOIN consult_types t ON t.id = r.type_id
      LEFT JOIN record_folders f ON f.id = r.folder_id
      ${where}
-     ORDER BY r.record_date ${order}, r.id ${order}
+     ORDER BY ${sortExpr}
      ${limit}`,
     params
   );
@@ -1061,19 +1083,42 @@ export function restoreAutoSnapshot(name: string): { ok: boolean; error?: string
 }
 
 // ---------- 상담 폴더 ----------
+// 폴더는 트리 구조(parent_id) + 같은 부모 안에서 sort_order로 순서를 가진다.
 export function getFolders() {
   return all(
     `SELECT f.*, (SELECT COUNT(*) FROM consult_records r WHERE r.folder_id = f.id) as record_count
-     FROM record_folders f ORDER BY f.name`
+     FROM record_folders f ORDER BY f.sort_order IS NULL, f.sort_order ASC, f.name`
   );
 }
 
-export function addFolder(name: string): { ok: boolean; error?: string; folder?: unknown } {
+// 폴더 id → 자기 자신을 포함한 하위 트리 전체 id 목록 (기록 필터·삭제 시 사용)
+export function getFolderSubtreeIds(folderId: number): number[] {
+  const allFolders = all<{ id: number; parent_id: number | null }>('SELECT id, parent_id FROM record_folders');
+  const children = new Map<number | null, number[]>();
+  for (const f of allFolders) {
+    const list = children.get(f.parent_id ?? null) ?? [];
+    list.push(f.id);
+    children.set(f.parent_id ?? null, list);
+  }
+  const out: number[] = [];
+  const stack = [folderId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    out.push(id);
+    for (const c of children.get(id) ?? []) stack.push(c);
+  }
+  return out;
+}
+
+export function addFolder(name: string, parentId: number | null = null): { ok: boolean; error?: string; folder?: unknown } {
   const trimmed = (name ?? '').trim();
   if (!trimmed) return { ok: false, error: '폴더 이름을 입력하세요.' };
-  const dup = get('SELECT id FROM record_folders WHERE name = ?', [trimmed]);
+  // 같은 부모 안에서 이름 중복 검사
+  const dup = get('SELECT id FROM record_folders WHERE name = ? AND parent_id IS ?', [trimmed, parentId]);
   if (dup) return { ok: false, error: '같은 이름의 폴더가 이미 있습니다.' };
-  db.run('INSERT INTO record_folders (name) VALUES (?)', [trimmed]);
+  const maxOrder = get<{ m: number | null }>('SELECT MAX(sort_order) as m FROM record_folders WHERE parent_id IS ?', [parentId]);
+  const nextOrder = Number(maxOrder?.m ?? 0) + 1;
+  db.run('INSERT INTO record_folders (name, parent_id, sort_order) VALUES (?, ?, ?)', [trimmed, parentId, nextOrder]);
   const id = lastInsertId();
   persist();
   return { ok: true, folder: get('SELECT * FROM record_folders WHERE id = ?', [id]) };
@@ -1082,14 +1127,48 @@ export function addFolder(name: string): { ok: boolean; error?: string; folder?:
 export function renameFolder(id: number, name: string): { ok: boolean; error?: string } {
   const trimmed = (name ?? '').trim();
   if (!trimmed) return { ok: false, error: '폴더 이름을 입력하세요.' };
-  const dup = get('SELECT id FROM record_folders WHERE name = ? AND id != ?', [trimmed, id]);
+  const cur = get<{ parent_id: number | null }>('SELECT parent_id FROM record_folders WHERE id = ?', [id]);
+  const dup = get('SELECT id FROM record_folders WHERE name = ? AND id != ? AND parent_id IS ?', [trimmed, id, cur?.parent_id ?? null]);
   if (dup) return { ok: false, error: '같은 이름의 폴더가 이미 있습니다.' };
   run('UPDATE record_folders SET name = ? WHERE id = ?', [trimmed, id]);
   return { ok: true };
 }
 
+// 폴더 이동(드래그 앤 드롭): 부모 변경 + 같은 부모 안에서 순서 변경.
+// targetParentId=null이면 최상위, beforeFolderId가 있으면 그 앞에, 없으면 맨 뒤에 놓는다.
+// 자기 자신을 자기 하위로 넣는 것(순환)은 차단한다.
+export function moveFolder(
+  id: number,
+  targetParentId: number | null,
+  beforeFolderId: number | null
+): { ok: boolean; error?: string } {
+  if (targetParentId != null) {
+    if (targetParentId === id) return { ok: false, error: '자기 자신 안으로 옮길 수 없습니다.' };
+    if (getFolderSubtreeIds(id).includes(targetParentId)) {
+      return { ok: false, error: '하위 폴더를 자기 자신 안으로 옮길 수 없습니다.' };
+    }
+  }
+  const siblings = all<{ id: number }>(
+    'SELECT id FROM record_folders WHERE parent_id IS ? AND id != ? ORDER BY sort_order IS NULL, sort_order ASC, name',
+    [targetParentId, id]
+  ).map((r) => r.id);
+  let insertAt = siblings.length;
+  if (beforeFolderId != null && beforeFolderId !== id) {
+    const idx = siblings.indexOf(beforeFolderId);
+    if (idx >= 0) insertAt = idx;
+  }
+  const newOrder = siblings.slice(0, insertAt).concat([id]).concat(siblings.slice(insertAt));
+  db.run('UPDATE record_folders SET parent_id = ? WHERE id = ?', [targetParentId, id]);
+  newOrder.forEach((fid, i) => db.run('UPDATE record_folders SET sort_order = ? WHERE id = ?', [i + 1, fid]));
+  persist();
+  return { ok: true };
+}
+
 // 폴더 삭제: 안의 기록은 지우지 않고 미분류로 되돌린다(기록 손실 방지).
+// 하위 폴더는 부모를 삭제된 폴더의 부모로 승격시켜 보존한다.
 export function deleteFolder(id: number) {
+  const cur = get<{ parent_id: number | null }>('SELECT parent_id FROM record_folders WHERE id = ?', [id]);
+  db.run('UPDATE record_folders SET parent_id = ? WHERE parent_id = ?', [cur?.parent_id ?? null, id]);
   db.run('UPDATE consult_records SET folder_id = NULL WHERE folder_id = ?', [id]);
   db.run('DELETE FROM record_folders WHERE id = ?', [id]);
   persist();
@@ -1228,13 +1307,25 @@ export function getRelationGraph() {
 
   const nodeIds = new Set<number>();
   const nodeNames = new Map<number, string>();
+  const nodeMeta = new Map<number, { grade: number | null; class_no: number | null; number: number | null }>();
+  const metaRows = all<{ id: number; name: string; grade: number | null; class_no: number | null; number: number | null }>(
+    'SELECT id, name, grade, class_no, number FROM students'
+  );
+  for (const m of metaRows) {
+    nodeNames.set(m.id, m.name);
+    nodeMeta.set(m.id, { grade: m.grade, class_no: m.class_no, number: m.number });
+  }
   for (const e of edges) {
     nodeIds.add(e.a);
     nodeIds.add(e.b);
-    nodeNames.set(e.a, e.aName);
-    nodeNames.set(e.b, e.bName);
   }
-  const nodes = Array.from(nodeIds).map((id) => ({ id, name: nodeNames.get(id) ?? `#${id}` }));
+  const nodes = Array.from(nodeIds).map((id) => ({
+    id,
+    name: nodeNames.get(id) ?? `#${id}`,
+    grade: nodeMeta.get(id)?.grade ?? null,
+    classNo: nodeMeta.get(id)?.class_no ?? null,
+    number: nodeMeta.get(id)?.number ?? null
+  }));
 
   return { nodes, edges };
 }

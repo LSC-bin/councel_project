@@ -77,8 +77,11 @@ function registerIpcHandlers() {
 
   // 폴더
   ipcMain.handle('folders:get', () => db.getFolders());
-  ipcMain.handle('folders:add', (_e, name: string) => db.addFolder(name));
+  ipcMain.handle('folders:add', (_e, name: string, parentId?: number | null) => db.addFolder(name, parentId ?? null));
   ipcMain.handle('folders:rename', (_e, id: number, name: string) => db.renameFolder(id, name));
+  ipcMain.handle('folders:move', (_e, id: number, targetParentId: number | null, beforeFolderId: number | null) =>
+    db.moveFolder(id, targetParentId, beforeFolderId)
+  );
   ipcMain.handle('folders:delete', (_e, id: number) => db.deleteFolder(id));
 
   // 조치사항
