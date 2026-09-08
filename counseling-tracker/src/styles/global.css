@@ -28,6 +28,30 @@
   box-sizing: border-box;
 }
 
+/* 다크 테마: html[data-theme="dark"]일 때 변수만 교체 */
+html[data-theme='dark'] {
+  --bg: #1c2128;
+  --bg-panel: #22282f;
+  --bg-hover: #2b323b;
+  --bg-active: #33404f;
+  --bg-card: #262c34;
+  --border: #3a424c;
+  --border-strong: #4a545f;
+  --text: #dce3ea;
+  --text-secondary: #9aa7b4;
+  --text-faint: #6f7c8a;
+  --accent: #5b93d0;
+  --accent-strong: #82b1e3;
+  --accent-bg: #2a3a4d;
+  --banner-bg: #24344a;
+  --danger: #e07070;
+  --danger-bg: #43302f;
+  --success: #63b47c;
+  --success-bg: #2b3d31;
+  --warn: #d5a04a;
+  --warn-bg: #403524;
+}
+
 html,
 body,
 #root {
@@ -143,6 +167,30 @@ button {
   font-size: 11px;
   color: var(--text-faint);
   -webkit-app-region: no-drag;
+}
+
+/* 사이드바 조치 기한 배지 */
+.sidebar-badge-link {
+  text-decoration: none;
+  -webkit-app-region: no-drag;
+}
+.sidebar-badge {
+  display: block;
+  padding: 5px 8px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-badge.urgent {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.sidebar-badge-link:hover .sidebar-badge {
+  background: var(--bg-active);
 }
 
 .sidebar-lock-btn {

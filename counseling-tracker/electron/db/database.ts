@@ -305,6 +305,9 @@ function migrateSchema() {
   addColumnTo('consult_records', 'folder_id', 'INTEGER');
   addColumnTo('record_folders', 'parent_id', 'INTEGER');
   addColumnTo('record_folders', 'sort_order', 'INTEGER');
+  addColumnTo('record_actions', 'done_date', 'TEXT');
+  addColumnTo('record_actions', 'done_note', 'TEXT');
+  addColumnTo('record_actions', 'repeat_days', 'INTEGER');
 
   // 예전 방식(기록에 딸린 next_appointment)으로 저장된 예약을 새 appointments 테이블로 1회성 이관.
   // 이미 이관된 기록(record_id로 연결된 예약이 있는 경우)은 건너뛴다.
@@ -974,16 +977,159 @@ export function getTodayAppointments() {
   );
 }
 
-export function getStudentRanking(limit = 10) {
+export function getStudentRanking(limit = 10, periodDays?: number) {
+  const dateClause = periodDays && periodDays > 0 ? `WHERE r.record_date >= date('now', '-' || ? || ' days')` : '';
+  const params: SqlValue[] = [];
+  if (dateClause) params.push(periodDays!);
+  params.push(limit);
   return all(
-    `SELECT s.id as student_id, s.name, COUNT(*) as count
+    `SELECT s.id as student_id, s.name, s.grade, s.class_no, s.number, COUNT(*) as count
      FROM consult_records r
      JOIN students s ON s.id = r.student_id
+     ${dateClause}
      GROUP BY r.student_id
      ORDER BY count DESC
      LIMIT ?`,
-    [limit]
+    params
   );
+}
+
+// 학년×반 히트맵: 반별 기록 건수 집계 (기간 지정 가능, 0/미지정=전체)
+export function getClassHeatmap(periodDays?: number) {
+  const dateClause = periodDays && periodDays > 0 ? `AND r.record_date >= date('now', '-' || ? || ' days')` : '';
+  const params: SqlValue[] = periodDays && periodDays > 0 ? [periodDays] : [];
+  return all(
+    `SELECT s.grade, s.class_no, COUNT(*) as count
+     FROM consult_records r
+     JOIN students s ON s.id = r.student_id
+     WHERE s.grade IS NOT NULL AND s.class_no IS NOT NULL ${dateClause}
+     GROUP BY s.grade, s.class_no
+     ORDER BY s.grade, s.class_no`,
+    params
+  );
+}
+
+// 유형별 월 추이: 최근 months개월 × 유형별 건수 (라인 차트용)
+export function getTypeTrend(months = 6) {
+  return all(
+    `SELECT t.id as type_id, t.name as type_name, t.color as type_color,
+            strftime('%Y-%m', r.record_date) as month, COUNT(*) as count
+     FROM consult_records r
+     JOIN consult_types t ON t.id = r.type_id
+     WHERE r.record_date >= date('now', '-' || ? || ' months')
+     GROUP BY r.type_id, month
+     ORDER BY month ASC`,
+    [months]
+  );
+}
+
+// 반별 요약: 학년·반별 기록 건수 + 학생 수 + 유형별 Top (담임 제출용 엑셀 시트)
+export function getClassSummary(periodDays?: number) {
+  const dateClause = periodDays && periodDays > 0 ? `AND r.record_date >= date('now', '-' || ? || ' days')` : '';
+  const params: SqlValue[] = periodDays && periodDays > 0 ? [periodDays] : [];
+  const rows = all(
+    `SELECT s.grade, s.class_no, COUNT(*) as record_count, COUNT(DISTINCT r.student_id) as student_count
+     FROM consult_records r
+     JOIN students s ON s.id = r.student_id
+     WHERE s.grade IS NOT NULL AND s.class_no IS NOT NULL ${dateClause}
+     GROUP BY s.grade, s.class_no
+     ORDER BY s.grade, s.class_no`,
+    params
+  );
+  // 반별 최다 유형
+  const typeParams: SqlValue[] = periodDays && periodDays > 0 ? [periodDays] : [];
+  const typeRows = all<{ grade: number; class_no: number; type_name: string; count: number }>(
+    `SELECT s.grade, s.class_no, t.name as type_name, COUNT(*) as count
+     FROM consult_records r
+     JOIN students s ON s.id = r.student_id
+     JOIN consult_types t ON t.id = r.type_id
+     WHERE s.grade IS NOT NULL AND s.class_no IS NOT NULL ${dateClause}
+     GROUP BY s.grade, s.class_no, t.name
+     ORDER BY count DESC`,
+    typeParams
+  );
+  const topType = new Map<string, string>();
+  for (const tr of typeRows) {
+    const key = `${tr.grade}-${tr.class_no}`;
+    if (!topType.has(key)) topType.set(key, `${tr.type_name}(${tr.count})`);
+  }
+  return rows.map((r) => ({ ...r, top_type: topType.get(`${r.grade}-${r.class_no}`) ?? '-' }));
+}
+
+// JSON 내보내기용 전체 데이터 덤프 (학생·기록·폴더·조치·예약·관계·유형·템플릿·설정)
+export function exportAllJson() {
+  const tables = [
+    'students',
+    'consult_types',
+    'quick_templates',
+    'consult_records',
+    'record_folders',
+    'record_actions',
+    'record_relations',
+    'appointments',
+    'settings'
+  ] as const;
+  const data: Record<string, unknown[]> = {};
+  for (const t of tables) data[t] = all(`SELECT * FROM ${t}`);
+  data.__meta = [{ app: 'counseling-tracker', version: 1, exported_at: new Date().toISOString() }];
+  return data;
+}
+
+// JSON 가져오기: mode='merge'면 id 충돌 행은 건너뛰고 없는 것만 추가,
+// mode='replace'면 대상 테이블을 비우고 통째로 대체(학생·기록 등 데이터 테이블만).
+export function importAllJson(jsonText: string, mode: 'merge' | 'replace'): { ok: boolean; error?: string; imported?: number } {
+  let data: Record<string, unknown[]>;
+  try {
+    data = JSON.parse(jsonText);
+  } catch {
+    return { ok: false, error: 'JSON 파일을 읽을 수 없습니다.' };
+  }
+  const TABLES = [
+    'students',
+    'consult_types',
+    'quick_templates',
+    'consult_records',
+    'record_folders',
+    'record_actions',
+    'record_relations',
+    'appointments'
+  ];
+  let imported = 0;
+  try {
+    db.run('BEGIN TRANSACTION');
+    for (const table of TABLES) {
+      const rows = data[table];
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+      if (mode === 'replace') {
+        db.run(`DELETE FROM ${table}`);
+      }
+      for (const row of rows as Record<string, SqlValue>[]) {
+        const cols = Object.keys(row);
+        if (cols.length === 0) continue;
+        if (mode === 'merge' && row.id != null) {
+          const exists = get(`SELECT id FROM ${table} WHERE id = ?`, [row.id as SqlValue]);
+          if (exists) continue;
+        }
+        db.run(
+          `INSERT OR REPLACE INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+          cols.map((c) => (row[c] === undefined ? null : (row[c] as SqlValue)))
+        );
+        imported++;
+      }
+    }
+    db.run('COMMIT');
+    migrateSchema();
+    seedDefaults();
+    persist();
+    return { ok: true, imported };
+  } catch (e) {
+    try {
+      db.run('ROLLBACK');
+    } catch {
+      /* 이미 종료된 트랜잭션 */
+    }
+    return { ok: false, error: String(e) };
+  }
 }
 
 export function getCrisisAlerts() {
@@ -1278,6 +1424,7 @@ export interface NewAction {
   text: string;
   done?: boolean;
   due_date?: string | null;
+  repeat_days?: number | null;
 }
 
 export function getActions(filter: { recordId?: number; studentId?: number; pendingOnly?: boolean } = {}) {
@@ -1304,32 +1451,96 @@ export function getActions(filter: { recordId?: number; studentId?: number; pend
   );
 }
 
+// 사이드바 배지용: 대기 중(기한 지남 포함) 조치 요약 — 오늘/내일 마감, 지남 건수.
+export function getPendingActionsSummary() {
+  const overdue = Number(
+    get<{ c: number }>(
+      `SELECT COUNT(*) as c FROM record_actions WHERE done = 0 AND due_date IS NOT NULL AND due_date < date('now')`
+    )?.c ?? 0
+  );
+  const today = Number(
+    get<{ c: number }>(`SELECT COUNT(*) as c FROM record_actions WHERE done = 0 AND due_date = date('now')`)?.c ?? 0
+  );
+  const tomorrow = Number(
+    get<{ c: number }>(
+      `SELECT COUNT(*) as c FROM record_actions WHERE done = 0 AND due_date = date('now', '+1 day')`
+    )?.c ?? 0
+  );
+  const total = Number(get<{ c: number }>(`SELECT COUNT(*) as c FROM record_actions WHERE done = 0`)?.c ?? 0);
+  return { overdue, today, tomorrow, total };
+}
+
 export function addAction(input: NewAction) {
   const text = (input.text ?? '').trim();
   if (!text) return { ok: false as const, error: '조치사항 내용을 입력하세요.' };
   db.run(
-    'INSERT INTO record_actions (record_id, student_id, text, done, due_date) VALUES (?, ?, ?, ?, ?)',
-    [input.record_id ?? null, input.student_id ?? null, text, input.done ? 1 : 0, input.due_date ?? null]
+    'INSERT INTO record_actions (record_id, student_id, text, done, due_date, repeat_days) VALUES (?, ?, ?, ?, ?, ?)',
+    [
+      input.record_id ?? null,
+      input.student_id ?? null,
+      text,
+      input.done ? 1 : 0,
+      input.due_date ?? null,
+      input.repeat_days ?? null
+    ]
   );
   const id = lastInsertId();
   persist();
   return { ok: true as const, action: get('SELECT * FROM record_actions WHERE id = ?', [id]) };
 }
 
-export function updateAction(id: number, patch: { text?: string; done?: boolean; due_date?: string | null }) {
+// 조치 완료 처리: 완료일 기록 + 반복 조치(repeat_days)면 같은 내용으로 다음 기한 새 조치를 자동 생성.
+export function completeAction(id: number, doneNote?: string | null) {
+  const cur = get<Record<string, SqlValue>>('SELECT * FROM record_actions WHERE id = ?', [id]);
+  if (!cur) return { ok: false as const, error: '조치를 찾을 수 없습니다.' };
+  run('UPDATE record_actions SET done = 1, done_date = date(\'now\'), done_note = ? WHERE id = ?', [
+    doneNote?.trim() || null,
+    id
+  ]);
+  const repeatDays = cur.repeat_days != null ? Number(cur.repeat_days) : null;
+  if (repeatDays && repeatDays > 0) {
+    db.run(
+      `INSERT INTO record_actions (record_id, student_id, text, done, due_date, repeat_days)
+       VALUES (?, ?, ?, 0, date('now', '+' || ? || ' days'), ?)`,
+      [cur.record_id, cur.student_id, cur.text, repeatDays, repeatDays]
+    );
+    persist();
+  }
+  return { ok: true as const, action: get('SELECT * FROM record_actions WHERE id = ?', [id]) };
+}
+
+// 완료 취소: 완료일·메모를 비우고, 반복으로 자동 생성된 후속 조치가 있으면 함께 삭제하지는 않고
+// (이미 사용자가 확인했을 수 있으므로) 그대로 둔다.
+export function reopenAction(id: number) {
+  run('UPDATE record_actions SET done = 0, done_date = NULL, done_note = NULL WHERE id = ?', [id]);
+  return { ok: true as const, action: get('SELECT * FROM record_actions WHERE id = ?', [id]) };
+}
+
+export function updateAction(
+  id: number,
+  patch: { text?: string; done?: boolean; due_date?: string | null; repeat_days?: number | null; done_note?: string | null }
+) {
   const fields: string[] = [];
   const values: SqlValue[] = [];
   if (patch.text !== undefined) {
     fields.push('text = ?');
     values.push(patch.text.trim());
   }
-  if (patch.done !== undefined) {
-    fields.push('done = ?');
-    values.push(patch.done ? 1 : 0);
-  }
   if (patch.due_date !== undefined) {
     fields.push('due_date = ?');
     values.push(patch.due_date);
+  }
+  if (patch.repeat_days !== undefined) {
+    fields.push('repeat_days = ?');
+    values.push(patch.repeat_days);
+  }
+  if (patch.done_note !== undefined) {
+    fields.push('done_note = ?');
+    values.push(patch.done_note);
+  }
+  if (patch.done !== undefined) {
+    // done 토글은 완료일·반복 생성 로직이 있는 전용 함수로 위임
+    return patch.done ? completeAction(id, patch.done_note) : reopenAction(id);
   }
   if (fields.length > 0) {
     run(`UPDATE record_actions SET ${fields.join(', ')} WHERE id = ?`, [...values, id]);

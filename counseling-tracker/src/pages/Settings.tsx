@@ -64,7 +64,251 @@ export default function Settings({ onSettingsChanged }: { onSettingsChanged?: ()
 
       <RecordTypeSettings />
 
+      <InputDefaultSettings />
+
+      <CrisisThresholdSettings />
+
+      <ThemeSettings />
+
+      <DataTransferSettings />
+
       <SchoolYearSettings />
+
+      <PrivacyNotice />
+    </div>
+  );
+}
+
+// ---------- 기록 입력 기본값 ----------
+const DEFAULT_TYPE_KEY = 'default_type_id';
+const DEFAULT_FOLDER_KEY = 'default_folder_id';
+
+function InputDefaultSettings() {
+  const [types, setTypes] = useState<ConsultType[]>([]);
+  const [folders, setFolders] = useState<RecordFolder[]>([]);
+  const [defaultTypeId, setDefaultTypeId] = useState('');
+  const [defaultFolderId, setDefaultFolderId] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    window.api.getConsultTypes().then(setTypes);
+    window.api.getFolders().then(setFolders);
+    window.api.getSetting(DEFAULT_TYPE_KEY).then((v) => setDefaultTypeId(v ?? ''));
+    window.api.getSetting(DEFAULT_FOLDER_KEY).then((v) => setDefaultFolderId(v ?? ''));
+  }, []);
+
+  async function save() {
+    await window.api.setSetting(DEFAULT_TYPE_KEY, defaultTypeId);
+    await window.api.setSetting(DEFAULT_FOLDER_KEY, defaultFolderId);
+    setMessage('저장되었습니다. 다음 기록 입력부터 적용됩니다.');
+    setTimeout(() => setMessage(null), 3000);
+  }
+
+  return (
+    <div className="section">
+      <h2 className="section-title">기록 입력 기본값</h2>
+      <div className="card" style={{ maxWidth: 480 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
+          기록 입력 화면을 열 때 미리 선택될 기본 유형·폴더를 지정합니다. 자주 쓰는 유형이 정해져 있다면 매번 고르지 않아도 됩니다.
+        </p>
+        <div className="field">
+          <label className="field-label">기본 기록 유형</label>
+          <select className="select" value={defaultTypeId} onChange={(e) => setDefaultTypeId(e.target.value)}>
+            <option value="">없음 (첫 번째 유형 사용)</option>
+            {types.map((t) => (
+              <option key={t.id} value={String(t.id)}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label className="field-label">기본 폴더</label>
+          <select className="select" value={defaultFolderId} onChange={(e) => setDefaultFolderId(e.target.value)}>
+            <option value="">미분류</option>
+            {folders.map((f) => (
+              <option key={f.id} value={String(f.id)}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={save}>
+          저장
+        </button>
+        {message && <p style={{ color: 'var(--success)', fontSize: 12.5, margin: '8px 0 0' }}>{message}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ---------- 위기 탐지 임계값 ----------
+const CRISIS_DAYS_KEY = 'crisis_threshold_days';
+const CRISIS_COUNT_KEY = 'crisis_threshold_count';
+
+function CrisisThresholdSettings() {
+  const [days, setDays] = useState('14');
+  const [count, setCount] = useState('3');
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    window.api.getSetting(CRISIS_DAYS_KEY).then((v) => setDays(v ?? '14'));
+    window.api.getSetting(CRISIS_COUNT_KEY).then((v) => setCount(v ?? '3'));
+  }, []);
+
+  async function save() {
+    await window.api.setSetting(CRISIS_DAYS_KEY, days);
+    await window.api.setSetting(CRISIS_COUNT_KEY, count);
+    setMessage('저장되었습니다. 대시보드 위기 감지·알림에 바로 적용됩니다.');
+    setTimeout(() => setMessage(null), 3000);
+  }
+
+  return (
+    <div className="section">
+      <h2 className="section-title">위기 학생 탐지 기준</h2>
+      <div className="card" style={{ maxWidth: 480 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
+          "최근 N일 안에 기록이 M건 이상"인 학생을 대시보드에서 위기 감지 대상으로 표시합니다. 상담이 잦아지는 학생을 빨리 알아챌 수 있습니다.
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div>
+            <label className="field-label">기간 (일)</label>
+            <input className="input" type="number" min={1} max={90} style={{ width: 100 }} value={days} onChange={(e) => setDays(e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">기록 건수 (이상)</label>
+            <input className="input" type="number" min={2} max={30} style={{ width: 100 }} value={count} onChange={(e) => setCount(e.target.value)} />
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={save}>
+            저장
+          </button>
+        </div>
+        {message && <p style={{ color: 'var(--success)', fontSize: 12.5, margin: '8px 0 0' }}>{message}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ---------- 테마 ----------
+const THEME_KEY = 'ui_theme';
+
+function ThemeSettings() {
+  const [theme, setTheme] = useState('light');
+
+  useEffect(() => {
+    window.api.getSetting(THEME_KEY).then((v) => setTheme(v === 'dark' ? 'dark' : 'light'));
+  }, []);
+
+  async function apply(value: string) {
+    setTheme(value);
+    await window.api.setSetting(THEME_KEY, value);
+    document.documentElement.dataset.theme = value;
+  }
+
+  return (
+    <div className="section">
+      <h2 className="section-title">화면 테마</h2>
+      <div className="card" style={{ maxWidth: 480 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className={'btn btn-sm' + (theme === 'light' ? ' btn-primary' : '')} onClick={() => apply('light')}>
+            라이트
+          </button>
+          <button className={'btn btn-sm' + (theme === 'dark' ? ' btn-primary' : '')} onClick={() => apply('dark')}>
+            다크
+          </button>
+        </div>
+        <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: '8px 0 0' }}>야간 상담·어두운 사무실에서 눈이 편한 다크 테마를 사용할 수 있습니다.</p>
+      </div>
+    </div>
+  );
+}
+
+// ---------- 데이터 내보내기 / 가져오기 (JSON) ----------
+function DataTransferSettings() {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleExport() {
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const result = await window.api.exportDataJson();
+      if (!result.canceled && result.filePath) setMessage(`내보내기 완료: ${result.filePath}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleImport(mode: 'merge' | 'replace') {
+    const desc =
+      mode === 'merge'
+        ? 'JSON 파일의 데이터 중 아직 없는 항목만 추가합니다 (기존 데이터 유지).'
+        : '기존 학생·기록·조치 등 데이터를 모두 지우고 JSON 파일로 대체합니다. 되돌릴 수 없습니다!';
+    if (!confirm(`${desc}\n\n진행할까요?`)) return;
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const result = await window.api.importDataJson(mode);
+      if (result.canceled) return;
+      if (!result.ok) {
+        setError(result.error ?? '가져오기에 실패했습니다.');
+        return;
+      }
+      setMessage(`${result.imported}건을 가져왔습니다. 화면을 새로고침하면 반영됩니다.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="section">
+      <h2 className="section-title">데이터 내보내기 · 가져오기</h2>
+      <div className="card" style={{ maxWidth: 480 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
+          전체 데이터(학생·상담 기록·조치·예약·폴더 등)를 JSON 파일로 내보내거나 다른 PC에서 가져올 수 있습니다. 암호화 백업(.backup)과 달리 다른 프로그램으로 이관할 때 쓰는 형식이며, 개인정보가 평문으로 담기므로 파일 관리에 주의하세요.
+        </p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button className="btn btn-primary btn-sm" disabled={busy} onClick={handleExport}>
+            JSON 내보내기
+          </button>
+          <button className="btn btn-sm" disabled={busy} onClick={() => handleImport('merge')}>
+            가져오기 (병합)
+          </button>
+          <button className="btn btn-sm" style={{ color: 'var(--danger)' }} disabled={busy} onClick={() => handleImport('replace')}>
+            가져오기 (전체 대체)
+          </button>
+        </div>
+        {message && <p style={{ color: 'var(--success)', fontSize: 12.5, margin: '8px 0 0' }}>{message}</p>}
+        {error && <p style={{ color: 'var(--danger)', fontSize: 12.5, margin: '8px 0 0' }}>{error}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ---------- 개인정보 처리 안내 ----------
+function PrivacyNotice() {
+  return (
+    <div className="section">
+      <h2 className="section-title">개인정보 처리 안내</h2>
+      <div className="card" style={{ maxWidth: 640 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          <p style={{ marginTop: 0 }}>
+            이 프로그램은 학생 상담·생활지도 기록을 <strong>이 PC 내부에만</strong> 저장하며, 어떠한 서버·클라우드·외부 API로도 데이터를 전송하지 않습니다.
+            네트워크 연결 없이도 모든 기능이 동작합니다(완전 오프라인).
+          </p>
+          <p>
+            저장 방식: 상담 기록 DB는 AES-256-GCM으로 암호화되어 저장되며, "상담 기록 암호화"를 켜면 앱 진입 비밀번호 없이는 파일 자체를 열 수 없습니다.
+          </p>
+          <p>
+            개인정보(학생명·보호자 연락처 등)가 포함된 내보내기 파일(엑셀·JSON·백업)을 생성한 경우 해당 파일의 보관·파기 책임은 사용자에게 있습니다.
+            업무 PC 외부로 옮길 때는 반드시 암호화 백업(.backup) 형식을 사용하고, 통계 제출에는 익명화 내보내기를 권장합니다.
+          </p>
+          <p style={{ marginBottom: 0 }}>보관 원칙: 상담 기록은 관련 법령·학교 규정에 따라 필요한 기간 동안만 보관하고, 학년도 전환 시 아카이브 기능을 활용하세요.</p>
+        </div>
+      </div>
     </div>
   );
 }

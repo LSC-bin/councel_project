@@ -45,7 +45,16 @@ export default function RecordInput() {
     window.api.getFolders().then(setFolders);
     window.api.getConsultTypes().then((t) => {
       setTypes(t);
-      if (t.length > 0) setTypeId(t[0].id);
+      // 설정에서 지정한 기본 유형이 있으면 그것을, 없으면 첫 번째 유형을 선택
+      window.api.getSetting('default_type_id').then((def) => {
+        const defId = def ? Number(def) : NaN;
+        const match = t.find((x) => x.id === defId);
+        setTypeId(match ? match.id : t.length > 0 ? t[0].id : null);
+      });
+    });
+    // 기본 폴더 적용
+    window.api.getSetting('default_folder_id').then((def) => {
+      if (def) setFolderId(Number(def) || null);
     });
   }, []);
 

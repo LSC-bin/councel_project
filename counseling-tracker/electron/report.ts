@@ -39,6 +39,20 @@ export async function buildAnonymizedReport(filePath: string) {
     monthlySheet.addRow({ month: m.month, count: m.count });
   });
 
+  const classSheet = workbook.addWorksheet('반별 요약');
+  classSheet.columns = [
+    { header: '학년', key: 'grade', width: 8 },
+    { header: '반', key: 'class_no', width: 8 },
+    { header: '기록 건수', key: 'record_count', width: 12 },
+    { header: '상담 학생 수', key: 'student_count', width: 14 },
+    { header: '최다 유형', key: 'top_type', width: 18 }
+  ];
+  (db.getClassSummary() as { grade: number; class_no: number; record_count: number; student_count: number; top_type: string }[]).forEach(
+    (c) => {
+      classSheet.addRow({ grade: c.grade, class_no: c.class_no, record_count: c.record_count, student_count: c.student_count, top_type: c.top_type });
+    }
+  );
+
   for (const sheet of workbook.worksheets) {
     sheet.getRow(1).font = { bold: true };
   }

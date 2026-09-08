@@ -44,6 +44,9 @@ interface RecordAction {
   text: string;
   done: number;
   due_date: string | null;
+  done_date: string | null;
+  done_note: string | null;
+  repeat_days: number | null;
   created_at: string;
   student_name: string | null;
   record_date: string | null;
@@ -55,6 +58,36 @@ interface NewAction {
   text: string;
   done?: boolean;
   due_date?: string | null;
+  repeat_days?: number | null;
+}
+
+interface PendingActionsSummary {
+  overdue: number;
+  today: number;
+  tomorrow: number;
+  total: number;
+}
+
+interface ClassHeatmapCell {
+  grade: number;
+  class_no: number;
+  count: number;
+}
+
+interface TypeTrendRow {
+  type_id: number;
+  type_name: string;
+  type_color: string;
+  month: string;
+  count: number;
+}
+
+interface ClassSummaryRow {
+  grade: number;
+  class_no: number;
+  record_count: number;
+  student_count: number;
+  top_type: string;
 }
 
 interface StudentDigestRecord {
@@ -283,12 +316,24 @@ interface Window {
 
     getActions: (filter?: { recordId?: number; studentId?: number; pendingOnly?: boolean }) => Promise<RecordAction[]>;
     addAction: (input: NewAction) => Promise<{ ok: boolean; error?: string; action?: RecordAction }>;
-    updateAction: (id: number, patch: { text?: string; done?: boolean; due_date?: string | null }) => Promise<{ ok: boolean; action?: RecordAction }>;
+    updateAction: (
+      id: number,
+      patch: { text?: string; done?: boolean; due_date?: string | null; repeat_days?: number | null; done_note?: string | null }
+    ) => Promise<{ ok: boolean; action?: RecordAction }>;
+    getPendingActionsSummary: () => Promise<PendingActionsSummary>;
     deleteAction: (id: number) => Promise<{ ok: boolean }>;
 
     getMonthlyStats: () => Promise<MonthlyStats>;
     getCrisisAlerts: () => Promise<CrisisAlert[]>;
-    getStudentRanking: (limit?: number) => Promise<{ student_id: number; name: string; count: number }[]>;
+    getStudentRanking: (
+      limit?: number,
+      periodDays?: number
+    ) => Promise<{ student_id: number; name: string; grade: number | null; class_no: number | null; number: number | null; count: number }[]>;
+    getClassHeatmap: (periodDays?: number) => Promise<ClassHeatmapCell[]>;
+    getTypeTrend: (months?: number) => Promise<TypeTrendRow[]>;
+    getClassSummary: (periodDays?: number) => Promise<ClassSummaryRow[]>;
+    exportDataJson: () => Promise<{ canceled: boolean; filePath?: string }>;
+    importDataJson: (mode: 'merge' | 'replace') => Promise<{ canceled: boolean; ok?: boolean; error?: string; imported?: number }>;
     getPinnedStudents: () => Promise<Student[]>;
     getUpcomingAppointments: (limit?: number) => Promise<UpcomingAppointment[]>;
     exportAnonymizedReport: () => Promise<{ canceled: boolean; filePath?: string }>;

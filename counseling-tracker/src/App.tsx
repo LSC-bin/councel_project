@@ -35,6 +35,9 @@ export default function App() {
       }
       setHasPassword(boot.hasPassword);
       setLocked(boot.hasPassword);
+      window.api.getSetting('ui_theme').then((t) => {
+        if (t === 'dark') document.documentElement.dataset.theme = 'dark';
+      });
       if (boot.hasPassword) {
         window.api.getSetting(LOCK_TIMEOUT_KEY).then((v) => setLockMinutes(v ? Number(v) || 0 : 0));
       }
@@ -77,6 +80,13 @@ export default function App() {
         dbLock={dbLocked}
         onUnlock={() => {
           setLocked(false);
+          if (dbLocked) {
+            // DB가 열린 직후 테마·잠금 시간 설정 로드
+            window.api.getSetting('ui_theme').then((t) => {
+              if (t === 'dark') document.documentElement.dataset.theme = 'dark';
+            });
+            window.api.getSetting(LOCK_TIMEOUT_KEY).then((v) => setLockMinutes(v ? Number(v) || 0 : 0));
+          }
           setDbLocked(false);
         }}
       />

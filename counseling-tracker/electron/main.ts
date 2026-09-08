@@ -93,9 +93,39 @@ function registerIpcHandlers() {
   // 통계 / 위기감지
   ipcMain.handle('stats:monthly', () => db.getMonthlyStats());
   ipcMain.handle('stats:crisisAlerts', () => db.getCrisisAlerts());
-  ipcMain.handle('stats:studentRanking', (_e, limit = 10) => db.getStudentRanking(limit));
+  ipcMain.handle('stats:studentRanking', (_e, limit = 10, periodDays?: number) => db.getStudentRanking(limit, periodDays));
+  ipcMain.handle('stats:classHeatmap', (_e, periodDays?: number) => db.getClassHeatmap(periodDays));
+  ipcMain.handle('stats:typeTrend', (_e, months = 6) => db.getTypeTrend(months));
+  ipcMain.handle('stats:classSummary', (_e, periodDays?: number) => db.getClassSummary(periodDays));
+  ipcMain.handle('actions:pendingSummary', () => db.getPendingActionsSummary());
   ipcMain.handle('students:pinned', () => db.getPinnedStudents());
   ipcMain.handle('stats:upcoming', (_e, limit = 5) => db.getUpcomingAppointments(limit));
+
+  // 데이터 JSON 내보내기/가져오기 (타 프로그램 이관용, 완전 로컬)
+  ipcMain.handle('data:exportJson', async () => {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: '데이터 JSON 내보내기',
+      defaultPath: `상담기록_데이터_${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+    if (canceled || !filePath) return { canceled: true };
+    const data = db.exportAllJson();
+    const { atomicWriteFileSync } = await import('./db/crypto');
+    atomicWriteFileSync(filePath, Buffer.from(JSON.stringify(data, null, 2), 'utf-8'));
+    return { canceled: false, filePath };
+  });
+  ipcMain.handle('data:importJson', async (_e, mode: 'merge' | 'replace') => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: '데이터 JSON 가져오기',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile']
+    });
+    if (canceled || filePaths.length === 0) return { canceled: true };
+    const fs = await import('node:fs');
+    const jsonText = fs.readFileSync(filePaths[0], 'utf-8');
+    const result = db.importAllJson(jsonText, mode);
+    return { canceled: false, ...result };
+  });
 
   // 예약(캘린더)
   ipcMain.handle('appointments:inRange', (_e, startDate: string, endDate: string) => db.getAppointmentsInRange(startDate, endDate));
