@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 const api = {
   // 학생
   importStudents: () => ipcRenderer.invoke('students:import'),
+  downloadStudentTemplate: () => ipcRenderer.invoke('students:downloadTemplate'),
   getStudents: (activeOnly = true) => ipcRenderer.invoke('students:get', activeOnly),
   getStudentsWithStats: (activeOnly = true) => ipcRenderer.invoke('students:getWithStats', activeOnly),
   togglePin: (studentId: number) => ipcRenderer.invoke('students:togglePin', studentId),
@@ -50,6 +51,9 @@ const api = {
   createBackupWithPassword: (password: string, filePath: string) => ipcRenderer.invoke('backup:createWithPassword', password, filePath),
   restoreBackupDialog: () => ipcRenderer.invoke('backup:restore'),
   restoreBackupWithPassword: (password: string, filePath: string) => ipcRenderer.invoke('backup:restoreWithPassword', password, filePath),
+  listAutoSnapshots: () => ipcRenderer.invoke('backup:listSnapshots'),
+  restoreAutoSnapshot: (name: string) => ipcRenderer.invoke('backup:restoreSnapshot', name),
+  createAutoSnapshot: () => ipcRenderer.invoke('backup:createSnapshot'),
 
   // 예약(캘린더)
   getAppointmentsInRange: (startDate: string, endDate: string) => ipcRenderer.invoke('appointments:inRange', startDate, endDate),

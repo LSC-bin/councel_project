@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TrashIcon } from '../components/icons';
 
-export default function Settings() {
+export default function Settings({ onSettingsChanged }: { onSettingsChanged?: () => void }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -20,7 +20,11 @@ export default function Settings() {
     try {
       const result = await window.api.importStudents();
       if (result.canceled) return;
-      setMessage(`${result.imported}명의 학생을 가져왔습니다.`);
+      if (result.error) {
+        setMessage(result.error);
+        return;
+      }
+      setMessage(`${result.imported}명의 학생을 가져왔습니다.${result.skipped > 0 ? ` (${result.skipped}행은 이름 없음/중복으로 건너뜀)` : ''}`);
       refresh();
     } finally {
       setImporting(false);
@@ -38,11 +42,17 @@ export default function Settings() {
         <h2 className="section-title">학생 명부</h2>
         <div className="card">
           <p style={{ color: 'var(--text-secondary)', marginTop: 0 }}>
-            엑셀 파일(학년도 · 학년 · 반 · 번호 · 이름)을 업로드해 학생 명부를 등록하세요.
+            엑셀 파일(학년도 · 학년 · 반 · 번호 · 이름, 선택: 보호자 · 연락처 · 주소 · 특이사항 · 메모)을 업로드해 학생 명부를 일괄 등록하세요.
+            이미 등록된 학생(이름·학년도·학년·반·번호 동일)은 자동으로 건너뜁니다. 학생 관리 화면에서도 같은 버튼을 쓸 수 있습니다.
           </p>
-          <button className="btn btn-primary" disabled={importing} onClick={handleImport}>
-            {importing ? '가져오는 중…' : '명부 업로드'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-primary" disabled={importing} onClick={handleImport}>
+              {importing ? '가져오는 중…' : '명부 업로드'}
+            </button>
+            <button className="btn" onClick={() => window.api.downloadStudentTemplate()}>
+              명부 양식 다운로드
+            </button>
+          </div>
           {message && <p style={{ color: 'var(--success)', fontSize: 13, marginTop: 10 }}>{message}</p>}
           <p style={{ color: 'var(--text-faint)', fontSize: 12.5, marginTop: 14, marginBottom: 0 }}>
             현재 등록된 학생: {students.length}명
@@ -50,7 +60,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <AppLockSettings />
+      <AppLockSettings onSettingsChanged={onSettingsChanged} />
 
       <RecordTypeSettings />
 
@@ -289,7 +299,9 @@ function RecordTypeSettings() {
   );
 }
 
-function AppLockSettings() {
+const LOCK_TIMEOUT_KEY = 'lock_timeout_minutes';
+
+function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void }) {
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
   // 비밀번호가 이미 설정된 경우, 현재 비밀번호를 먼저 확인해야 변경/해제 폼이 열린다.
   const [verified, setVerified] = useState(false);
@@ -300,12 +312,14 @@ function AppLockSettings() {
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [lockTimeout, setLockTimeout] = useState('0');
 
   function refresh() {
     window.api.hasPassword().then((v) => {
       setHasPassword(v);
       setVerified(!v);
     });
+    window.api.getSetting(LOCK_TIMEOUT_KEY).then((v) => setLockTimeout(v ?? '0'));
   }
 
   useEffect(() => {
@@ -353,6 +367,7 @@ function AppLockSettings() {
       setMessage(hasPassword ? '비밀번호가 변경되었습니다.' : '앱 잠금이 설정되었습니다.');
       resetForm();
       refresh();
+      onSettingsChanged?.();
     } finally {
       setSaving(false);
     }
@@ -372,9 +387,16 @@ function AppLockSettings() {
       setMessage('앱 잠금이 해제되었습니다.');
       resetForm();
       refresh();
+      onSettingsChanged?.();
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleLockTimeoutChange(value: string) {
+    setLockTimeout(value);
+    await window.api.setSetting(LOCK_TIMEOUT_KEY, value);
+    onSettingsChanged?.();
   }
 
   if (hasPassword === null) return null;
@@ -445,6 +467,20 @@ function AppLockSettings() {
             </div>
           </>
         )}
+
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+          <label className="field-label">자동 잠금 (비밀번호 설정 시에만 동작)</label>
+          <select className="select" value={lockTimeout} onChange={(e) => handleLockTimeoutChange(e.target.value)}>
+            <option value="0">사용 안 함</option>
+            <option value="5">5분 뒤 자동 잠금</option>
+            <option value="10">10분 뒤 자동 잠금</option>
+            <option value="30">30분 뒤 자동 잠금</option>
+            <option value="60">1시간 뒤 자동 잠금</option>
+          </select>
+          <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: '6px 0 0' }}>
+            조작이 없으면 설정한 시간 뒤에 잠금 화면이 표시됩니다. 사이드바 "지금 잠금" 버튼으로 즉시 잠글 수도 있습니다.
+          </p>
+        </div>
       </div>
     </div>
   );

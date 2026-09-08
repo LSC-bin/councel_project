@@ -244,7 +244,8 @@ type UpcomingAppointment = Appointment;
 
 interface Window {
   api: {
-    importStudents: () => Promise<{ imported: number; canceled?: boolean }>;
+    importStudents: () => Promise<{ imported: number; skipped: number; canceled?: boolean; error?: string }>;
+    downloadStudentTemplate: () => Promise<{ canceled: boolean; filePath?: string }>;
     getStudents: (activeOnly?: boolean) => Promise<Student[]>;
     getStudentsWithStats: (activeOnly?: boolean) => Promise<StudentWithStats[]>;
     togglePin: (studentId: number) => Promise<Student>;
@@ -286,6 +287,9 @@ interface Window {
     createBackupWithPassword: (password: string, filePath: string) => Promise<{ ok: boolean; error?: string }>;
     restoreBackupDialog: () => Promise<{ canceled: boolean; needPassword?: boolean; filePath?: string }>;
     restoreBackupWithPassword: (password: string, filePath: string) => Promise<{ ok: boolean; error?: string }>;
+    listAutoSnapshots: () => Promise<{ name: string; size: number; modified: string }[]>;
+    restoreAutoSnapshot: (name: string) => Promise<{ ok: boolean; error?: string }>;
+    createAutoSnapshot: () => Promise<{ ok: boolean; filePath?: string; error?: string }>;
 
     getAppointmentsInRange: (startDate: string, endDate: string) => Promise<Appointment[]>;
     getAppointmentsForDate: (date: string) => Promise<Appointment[]>;

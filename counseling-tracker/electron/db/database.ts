@@ -268,35 +268,98 @@ function seedDefaults() {
 }
 
 // ---------- 학생 ----------
-export function importStudentsFromExcel(filePath: string) {
-  const workbook = XLSX.readFile(filePath);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<{
-    학년도?: string | number;
-    학년?: string | number;
-    반?: string | number;
-    번호?: string | number;
-    이름?: string;
-  }>(sheet);
+// 엑셀 일괄 등록: 기본 컬럼(학년도·학년·반·번호·이름) 외에 보호자·연락처 등 확장 컬럼도 인식한다.
+// 같은 학년도·학년·반·번호·이름의 활성 학생이 이미 있으면 중복으로 보고 건너뛴다.
+export interface StudentImportResult {
+  imported: number;
+  skipped: number;
+  canceled?: boolean;
+  error?: string;
+}
 
-  const toInt = (v: string | number | undefined) => (v != null && v !== '' ? Number(v) : null);
+const TEMPLATE_HEADERS = [
+  '학년도',
+  '학년',
+  '반',
+  '번호',
+  '이름',
+  '보호자1',
+  '보호자1 연락처',
+  '보호자2',
+  '보호자2 연락처',
+  '학생 연락처',
+  '주소',
+  '특이사항',
+  '메모'
+];
 
-  let count = 0;
+export function buildStudentTemplateFile(filePath: string) {
+  const wb = XLSX.utils.book_new();
+  const sample = ['2026', '1', '2', '5', '김예시', '김보호자', '010-0000-0000', '', '', '', '', '', ''];
+  const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, sample]);
+  ws['!cols'] = TEMPLATE_HEADERS.map(() => ({ wch: 14 }));
+  XLSX.utils.book_append_sheet(wb, ws, '학생명부');
+  XLSX.writeFile(wb, filePath);
+}
+
+export function importStudentsFromExcel(filePath: string): StudentImportResult {
+  let rows: Record<string, string | number | undefined>[];
+  try {
+    const workbook = XLSX.readFile(filePath);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json<Record<string, string | number | undefined>>(sheet);
+  } catch (e) {
+    return { imported: 0, skipped: 0, error: `엑셀 파일을 읽을 수 없습니다: ${String(e)}` };
+  }
+
+  const toInt = (v: string | number | undefined) => (v != null && String(v).trim() !== '' && !Number.isNaN(Number(v)) ? Number(v) : null);
+  const str = (v: string | number | undefined) => (v != null && String(v).trim() !== '' ? String(v).trim() : null);
+
+  let imported = 0;
+  let skipped = 0;
   for (const row of rows) {
-    const name = row['이름'];
-    if (!name) continue;
-    const schoolYear = row['학년도'] != null && row['학년도'] !== '' ? String(row['학년도']) : null;
-    db.run('INSERT INTO students (name, school_year, grade, class_no, number, active) VALUES (?, ?, ?, ?, ?, 1)', [
-      name,
-      schoolYear,
-      toInt(row['학년']),
-      toInt(row['반']),
-      toInt(row['번호'])
-    ]);
-    count++;
+    const name = str(row['이름'] ?? row['성명'] ?? row['학생명']);
+    if (!name) {
+      skipped++;
+      continue;
+    }
+    const schoolYear = str(row['학년도']);
+    const grade = toInt(row['학년']);
+    const classNo = toInt(row['반'] ?? row['클래스']);
+    const number = toInt(row['번호']);
+    // 중복 검사: 이름 + 학년도 + 학년 + 반 + 번호가 모두 같으면 이미 등록된 학생으로 본다.
+    const dup = get<{ id: number }>(
+      `SELECT id FROM students WHERE active = 1 AND name = ? AND school_year IS ? AND grade IS ? AND class_no IS ? AND number IS ?`,
+      [name, schoolYear, grade, classNo, number]
+    );
+    if (dup) {
+      skipped++;
+      continue;
+    }
+    db.run(
+      `INSERT INTO students
+        (name, school_year, grade, class_no, number, guardian_name, guardian_phone, guardian2_name, guardian2_phone, student_phone, address, health_note, memo, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [
+        name,
+        schoolYear,
+        grade,
+        classNo,
+        number,
+        str(row['보호자1'] ?? row['보호자']),
+        str(row['보호자1 연락처'] ?? row['보호자 연락처']),
+        str(row['보호자2']),
+        str(row['보호자2 연락처']),
+        str(row['학생 연락처']),
+        str(row['주소']),
+        str(row['특이사항']),
+        str(row['메모'])
+      ]
+    );
+    imported++;
   }
   persist();
-  return { imported: count };
+  return { imported, skipped };
 }
 
 export function getStudents(activeOnly = true) {
@@ -931,6 +994,69 @@ export function restoreBackup(password: string, filePath: string): { ok: boolean
       return { ok: false, error: '비밀번호가 올바르지 않거나 파일이 손상되었습니다.' };
     }
     return { ok: false, error: msg };
+  }
+}
+
+// ---------- 자동 백업(로컬 스냅샷) ----------
+// DB 키로 암호화된 스냅샷을 userData/auto-backups에 남기고 최근 keep개만 보관한다.
+// 수동 백업(.backup, 비밀번호 기반)과 달리 PC 밖으로 나가면 열 수 없는 내부 안전망이다.
+function autoBackupDir(): string {
+  const dir = path.join(app.getPath('userData'), 'auto-backups');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+export function createAutoSnapshot(keep = 7): { ok: boolean; filePath?: string; error?: string } {
+  try {
+    const dir = autoBackupDir();
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filePath = path.join(dir, `snapshot-${stamp}.bak`);
+    const data = Buffer.from(db.export());
+    const blob = dbKey ? encryptBuffer(data, dbKey) : data;
+    atomicWriteFileSync(filePath, blob);
+    // 오래된 스냅샷 정리
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith('snapshot-') && f.endsWith('.bak'))
+      .map((f) => ({ f, m: fs.statSync(path.join(dir, f)).mtimeMs }))
+      .sort((a, b) => b.m - a.m);
+    for (const old of files.slice(keep)) fs.rmSync(path.join(dir, old.f));
+    return { ok: true, filePath };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+export function listAutoSnapshots() {
+  const dir = autoBackupDir();
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.startsWith('snapshot-') && f.endsWith('.bak'))
+    .map((f) => {
+      const st = fs.statSync(path.join(dir, f));
+      return { name: f, size: st.size, modified: st.mtime.toISOString() };
+    })
+    .sort((a, b) => b.modified.localeCompare(a.modified));
+}
+
+export function restoreAutoSnapshot(name: string): { ok: boolean; error?: string } {
+  // 경로 이탈 방지: 파일명만 허용
+  if (name.includes('/') || name.includes('\\') || name.includes('..')) {
+    return { ok: false, error: '잘못된 스냅샷 이름입니다.' };
+  }
+  try {
+    const filePath = path.join(autoBackupDir(), name);
+    const blob = fs.readFileSync(filePath);
+    const plain = isEncryptedFile(blob) ? decryptBuffer(blob, dbKey!) : blob;
+    const DbCtor = db.constructor as new (data?: Uint8Array) => SqlJsDatabase;
+    db = new DbCtor(plain);
+    db.exec(SCHEMA);
+    migrateSchema();
+    seedDefaults();
+    persist();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
   }
 }
 

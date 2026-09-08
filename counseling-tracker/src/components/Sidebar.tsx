@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { LockIcon } from './icons';
 
 const NAV_ITEMS = [
   { to: '/', label: '대시보드', end: true },
@@ -11,7 +12,7 @@ const NAV_ITEMS = [
   { to: '/settings', label: '설정' }
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onLockNow }: { onLockNow?: () => void }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-title">상담기록관리</div>
@@ -27,7 +28,15 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
-      <div className="sidebar-footer">v0.2.0 · 로컬 암호화 저장</div>
+      {onLockNow && (
+        <div style={{ padding: '6px' }}>
+          <button type="button" className="sidebar-lock-btn" onClick={onLockNow} title="지금 바로 앱을 잠급니다">
+            <LockIcon />
+            <span>지금 잠금</span>
+          </button>
+        </div>
+      )}
+      <div className="sidebar-footer">v0.3.0 · 로컬 암호화 저장</div>
     </aside>
   );
 }

@@ -40,8 +40,18 @@ function registerIpcHandlers() {
       filters: [{ name: 'Excel', extensions: ['xlsx', 'xls'] }],
       properties: ['openFile']
     });
-    if (result.canceled || result.filePaths.length === 0) return { imported: 0, canceled: true };
+    if (result.canceled || result.filePaths.length === 0) return { imported: 0, skipped: 0, canceled: true };
     return db.importStudentsFromExcel(result.filePaths[0]);
+  });
+  ipcMain.handle('students:downloadTemplate', async () => {
+    const result = await dialog.showSaveDialog({
+      title: '학생 명부 양식 저장',
+      defaultPath: '학생명부_양식.xlsx',
+      filters: [{ name: 'Excel', extensions: ['xlsx'] }]
+    });
+    if (result.canceled || !result.filePath) return { canceled: true };
+    db.buildStudentTemplateFile(result.filePath);
+    return { canceled: false, filePath: result.filePath };
   });
   ipcMain.handle('students:get', (_e, activeOnly = true) => db.getStudents(activeOnly));
   ipcMain.handle('students:getWithStats', (_e, activeOnly = true) => db.getStudentsWithStats(activeOnly));
@@ -128,6 +138,9 @@ function registerIpcHandlers() {
   ipcMain.handle('backup:restoreWithPassword', (_e, password: string, filePath: string) =>
     db.restoreBackup(password, filePath)
   );
+  ipcMain.handle('backup:listSnapshots', () => db.listAutoSnapshots());
+  ipcMain.handle('backup:restoreSnapshot', (_e, name: string) => db.restoreAutoSnapshot(name));
+  ipcMain.handle('backup:createSnapshot', () => db.createAutoSnapshot());
 
   // 유형 / 템플릿
   ipcMain.handle('types:get', () => db.getConsultTypes());
@@ -199,6 +212,9 @@ app.whenReady().then(async () => {
   createWindow();
   checkReminders();
   setInterval(checkReminders, 1000 * 60 * 60);
+  // 자동 백업: 시작 시 1회 + 이후 30분마다 로컬 스냅샷(최근 7개 보관)
+  db.createAutoSnapshot();
+  setInterval(() => db.createAutoSnapshot(), 1000 * 60 * 30);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

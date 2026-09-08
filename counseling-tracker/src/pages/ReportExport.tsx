@@ -1,6 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ReportExport() {
+  const [snapshots, setSnapshots] = useState<{ name: string; size: number; modified: string }[]>([]);
+  const [snapshotMsg, setSnapshotMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
+
+  function refreshSnapshots() {
+    window.api.listAutoSnapshots().then(setSnapshots);
+  }
+
+  useEffect(() => {
+    refreshSnapshots();
+  }, []);
+
   const [message, setMessage] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [backupPath, setBackupPath] = useState<string | null>(null);
@@ -163,6 +174,71 @@ export default function ReportExport() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 10 }}>
+        <div className="section-title">자동 백업 스냅샷</div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
+          앱이 시작할 때와 30분마다 이 PC에 암호화 스냅샷을 자동 저장합니다(최근 7개 보관). 실수로 데이터를 지웠을 때 직전 상태로 되돌릴 수 있습니다.
+        </p>
+        {snapshotMsg && (
+          <p style={{ fontSize: 12.5, color: snapshotMsg.tone === 'ok' ? 'var(--success)' : 'var(--danger)' }}>{snapshotMsg.text}</p>
+        )}
+        {snapshots.length === 0 ? (
+          <p style={{ color: 'var(--text-faint)', fontSize: 12.5 }}>저장된 스냅샷이 없습니다.</p>
+        ) : (
+          <table className="record-table">
+            <thead>
+              <tr>
+                <th>스냅샷</th>
+                <th>저장 시각</th>
+                <th>크기</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {snapshots.map((s) => (
+                <tr key={s.name}>
+                  <td>{s.name}</td>
+                  <td>{new Date(s.modified).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</td>
+                  <td>{(s.size / 1024).toFixed(0)} KB</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      className="btn btn-sm"
+                      onClick={async () => {
+                        if (!confirm(`이 스냅샷(${s.name}) 상태로 되돌리면 이후 변경사항은 사라집니다. 진행할까요?`)) return;
+                        const r = await window.api.restoreAutoSnapshot(s.name);
+                        if (r.ok) {
+                          setSnapshotMsg({ tone: 'ok', text: '복원 완료. 화면을 새로고침합니다.' });
+                          setTimeout(() => window.location.reload(), 1200);
+                        } else {
+                          setSnapshotMsg({ tone: 'err', text: r.error ?? '복원에 실패했습니다.' });
+                        }
+                      }}
+                    >
+                      복원
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <button
+          className="btn"
+          style={{ marginTop: 8 }}
+          onClick={async () => {
+            const r = await window.api.createAutoSnapshot();
+            if (r.ok) {
+              setSnapshotMsg({ tone: 'ok', text: '스냅샷을 지금 저장했습니다.' });
+              refreshSnapshots();
+            } else {
+              setSnapshotMsg({ tone: 'err', text: r.error ?? '스냅샷 저장 실패' });
+            }
+          }}
+        >
+          지금 스냅샷 저장
+        </button>
       </div>
     </div>
   );

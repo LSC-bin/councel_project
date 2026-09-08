@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar, ProfileFields, StudentFormFields, formatClassInfo, useProfileFieldState } from './studentShared';
 import { PinIcon, PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
+import { useContextMenu } from '../components/ContextMenu';
 
 export default function StudentsView() {
   const navigate = useNavigate();
+  const ctx = useContextMenu();
 
   const [students, setStudents] = useState<StudentWithStats[]>([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
   function refresh() {
     setLoading(true);
@@ -29,18 +33,71 @@ export default function StudentsView() {
     return students.filter((s) => s.name.includes(query) || String(s.number ?? '').includes(query));
   }, [students, query]);
 
+  async function handleExcelImport() {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const result = await window.api.importStudents();
+      if (result.canceled) return;
+      if (result.error) {
+        setImportResult({ tone: 'err', text: result.error });
+        return;
+      }
+      setImportResult({
+        tone: 'ok',
+        text: `${result.imported}명을 등록했습니다.${result.skipped > 0 ? ` ${result.skipped}행은 이름 없음 또는 중복으로 건너뛰었습니다.` : ''}`
+      });
+      refresh();
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function handleTogglePin(s: StudentWithStats) {
+    await window.api.togglePin(s.id);
+    refresh();
+  }
+
+  async function handleDelete(s: StudentWithStats) {
+    if (!confirm(`${s.name} 학생을 삭제할까요? 이 학생의 기록도 모두 함께 삭제되며 되돌릴 수 없습니다.`)) return;
+    await window.api.deleteStudent(s.id);
+    refresh();
+  }
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">학생 관리</h1>
-        <p className="page-subtitle">학생 정보를 확인·수정하고, 학생별 전체 기록을 한눈에 봅니다.</p>
+        <p className="page-subtitle">학생 정보를 확인·수정하고, 학생별 전체 기록을 한눈에 봅니다. 행을 우클릭하면 빠른 메뉴가 열립니다.</p>
       </div>
 
-      <div className="card" style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
-        <input className="input" placeholder="이름 또는 번호 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <div className="card" style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          className="input"
+          style={{ flex: '1 1 200px' }}
+          placeholder="이름 또는 번호 검색"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <button className="btn" style={{ whiteSpace: 'nowrap' }} disabled={importing} onClick={handleExcelImport} title="엑셀 파일로 학생을 일괄 등록합니다">
+          {importing ? '가져오는 중…' : '엑셀 일괄 등록'}
+        </button>
+        <button
+          className="btn"
+          style={{ whiteSpace: 'nowrap' }}
+          onClick={() => window.api.downloadStudentTemplate()}
+          title="학년도·학년·반·번호·이름·보호자 등 컬럼이 들어간 엑셀 양식을 저장합니다"
+        >
+          명부 양식 다운로드
+        </button>
         <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }} onClick={() => setAdding(true)}>
           <PlusIcon /> 학생 추가
         </button>
+        {importResult && (
+          <p style={{ flexBasis: '100%', margin: 0, fontSize: 12.5, color: importResult.tone === 'ok' ? 'var(--success)' : 'var(--danger)' }}>
+            {importResult.text}
+          </p>
+        )}
       </div>
 
       {adding && (
@@ -76,7 +133,20 @@ export default function StudentsView() {
             </thead>
             <tbody>
               {filtered.map((s) => (
-                <tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/students/${s.id}`)}>
+                <tr
+                  key={s.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/students/${s.id}`)}
+                  onContextMenu={(e) =>
+                    ctx.open(e, [
+                      { label: '학생 프로필 열기', onClick: () => navigate(`/students/${s.id}`) },
+                      { label: '기록 추가', onClick: () => navigate('/input', { state: { studentId: s.id, studentName: s.name } }) },
+                      { label: '이 학생 기록 조회', onClick: () => navigate('/search', { state: { studentId: s.id } }) },
+                      { label: s.pinned ? '즐겨찾기 해제' : '즐겨찾기 고정', onClick: () => handleTogglePin(s) },
+                      { label: '학생 삭제', danger: true, separatorBefore: true, onClick: () => handleDelete(s) }
+                    ])
+                  }
+                >
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <Avatar name={s.name} size={20} />
@@ -98,6 +168,7 @@ export default function StudentsView() {
           </table>
         )}
       </div>
+      {ctx.element}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import LockScreen from './components/LockScreen';
@@ -13,14 +13,49 @@ import RelationGraphView from './pages/RelationGraphView';
 import ReportExport from './pages/ReportExport';
 import Settings from './pages/Settings';
 
+const LOCK_TIMEOUT_KEY = 'lock_timeout_minutes';
+
 export default function App() {
-  const [locked, setLocked] = useState<boolean | null>(null);
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [lockMinutes, setLockMinutes] = useState<number>(0);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    window.api.hasPassword().then(setLocked);
+    Promise.all([window.api.hasPassword(), window.api.getSetting(LOCK_TIMEOUT_KEY)]).then(([hp, v]) => {
+      setHasPassword(hp);
+      setLocked(hp);
+      setLockMinutes(v ? Number(v) || 0 : 0);
+    });
   }, []);
 
-  if (locked === null) {
+  // 자동 잠금: 비밀번호가 설정되어 있고 잠금 시간이 0이 아니면,
+  // 마지막 조작(키·마우스) 후 lockMinutes가 지나면 잠금 화면으로 돌아간다.
+  useEffect(() => {
+    if (!hasPassword || locked || lockMinutes <= 0) {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+      return;
+    }
+    function reset() {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => setLocked(true), lockMinutes * 60 * 1000);
+    }
+    const events: (keyof WindowEventMap)[] = ['keydown', 'mousedown', 'mousemove', 'wheel'];
+    events.forEach((ev) => window.addEventListener(ev, reset, { passive: true }));
+    reset();
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, reset));
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [hasPassword, locked, lockMinutes]);
+
+  // 설정 화면에서 잠금 시간을 바꾸면 반영
+  function reloadLockTimeout() {
+    window.api.getSetting(LOCK_TIMEOUT_KEY).then((v) => setLockMinutes(v ? Number(v) || 0 : 0));
+  }
+
+  if (hasPassword === null) {
     return <div style={{ height: '100vh', background: 'var(--bg)' }} />;
   }
 
@@ -30,7 +65,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar />
+      <Sidebar onLockNow={hasPassword ? () => setLocked(true) : undefined} />
       <div className="main-area">
         <div className="top-banner">
           <span className="top-banner-title">학생 상담·생활지도 기록</span>
@@ -47,7 +82,7 @@ export default function App() {
             <Route path="/statistics" element={<Statistics />} />
             <Route path="/relations" element={<RelationGraphView />} />
             <Route path="/report" element={<ReportExport />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={<Settings onSettingsChanged={reloadLockTimeout} />} />
           </Routes>
         </main>
       </div>

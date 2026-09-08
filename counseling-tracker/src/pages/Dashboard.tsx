@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MetricCard from '../components/MetricCard';
 import Calendar from '../components/Calendar';
 import ActionList from '../components/ActionList';
+import { useContextMenu } from '../components/ContextMenu';
 
 function initials(name: string) {
   return name.slice(0, 1);
@@ -11,6 +12,7 @@ function initials(name: string) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const ctx = useContextMenu();
   const navState = location.state as { studentId?: number; studentName?: string } | null;
 
   const [stats, setStats] = useState<MonthlyStats | null>(null);
@@ -68,7 +70,24 @@ export default function Dashboard() {
       {!loading && pinned.length > 0 && (
         <div className="pinned-row">
           {pinned.map((s) => (
-            <button key={s.id} className="pinned-chip" onClick={() => navigate(`/students/${s.id}`)}>
+            <button
+              key={s.id}
+              className="pinned-chip"
+              onClick={() => navigate(`/students/${s.id}`)}
+              onContextMenu={(e) =>
+                ctx.open(e, [
+                  { label: '학생 프로필 열기', onClick: () => navigate(`/students/${s.id}`) },
+                  { label: '기록 추가', onClick: () => navigate('/input', { state: { studentId: s.id, studentName: s.name } }) },
+                  {
+                    label: '즐겨찾기 해제',
+                    onClick: async () => {
+                      await window.api.togglePin(s.id);
+                      window.api.getPinnedStudents().then(setPinned);
+                    }
+                  }
+                ])
+              }
+            >
               <span className="pinned-avatar">{initials(s.name)}</span>
               <span>{s.name}</span>
             </button>
@@ -135,7 +154,18 @@ export default function Dashboard() {
                   </thead>
                   <tbody>
                     {recent.map((r) => (
-                      <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/search/${r.id}`)}>
+                      <tr
+                        key={r.id}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/search/${r.id}`)}
+                        onContextMenu={(e) =>
+                          ctx.open(e, [
+                            { label: '기록 열기', onClick: () => navigate(`/search/${r.id}`) },
+                            { label: '학생 프로필', onClick: () => navigate(`/students/${r.student_id}`) },
+                            { label: '이 학생에 기록 추가', onClick: () => navigate('/input', { state: { studentId: r.student_id, studentName: r.student_name } }) }
+                          ])
+                        }
+                      >
                         <td style={{ whiteSpace: 'nowrap' }}>{r.record_date.slice(5)}</td>
                         <td>{r.student_name}</td>
                         <td>
@@ -184,6 +214,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      {ctx.element}
     </div>
   );
 }

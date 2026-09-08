@@ -16,11 +16,13 @@ import {
 import { EditIcon, TrashIcon, BackIcon, PinIcon, CalendarIcon } from '../components/icons';
 import ActionList from '../components/ActionList';
 import Modal from '../components/Modal';
+import { useContextMenu } from '../components/ContextMenu';
 
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
   const studentId = Number(id);
   const navigate = useNavigate();
+  const ctx = useContextMenu();
 
   const [student, setStudent] = useState<Student | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -325,7 +327,27 @@ export default function StudentDetail() {
                   </thead>
                   <tbody>
                     {records.map((r) => (
-                      <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/search/${r.id}`)}>
+                      <tr
+                        key={r.id}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/search/${r.id}`)}
+                        onContextMenu={(e) =>
+                          ctx.open(e, [
+                            { label: '기록 열기', onClick: () => navigate(`/search/${r.id}`) },
+                            { label: '예약 잡기', onClick: () => navigate('/', { state: { studentId: r.student_id, studentName: student.name } }) },
+                            {
+                              label: '기록 삭제',
+                              danger: true,
+                              separatorBefore: true,
+                              onClick: async () => {
+                                if (!confirm(`${r.record_date} 기록을 삭제할까요? 되돌릴 수 없습니다.`)) return;
+                                await window.api.deleteRecord(r.id);
+                                loadHistory();
+                              }
+                            }
+                          ])
+                        }
+                      >
                         <td>{r.record_date}</td>
                         <td>
                           <span className="badge" style={{ background: `${r.type_color}18`, color: r.type_color, border: `1px solid ${r.type_color}44` }}>
@@ -346,6 +368,7 @@ export default function StudentDetail() {
           </div>
         </div>
       </div>
+      {ctx.element}
     </div>
   );
 }
