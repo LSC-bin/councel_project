@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RelationEditor } from './recordShared';
-import { TrashIcon, BackIcon, CalendarIcon, FolderIcon } from '../components/icons';
+import { TrashIcon, BackIcon, CalendarIcon, FolderIcon, EditIcon } from '../components/icons';
 import { Avatar, formatClassInfo } from './studentShared';
 import ActionList from '../components/ActionList';
 import Modal from '../components/Modal';
 
 const REFERRAL_OPTIONS = ['Wee클래스', '학폭담당', '보건교사', '학부모', '기타'];
+
+// 상태 점수 색: 1=빨강(어려움) ~ 5=초록(좋음). 관계 그래프 엣지 색과 같은 척도.
+function scoreColorLocal(score: number): string {
+  const colors = ['#c93c3c', '#d07a2f', '#b09417', '#6f9e3f', '#2e7d46'];
+  return colors[Math.min(4, Math.max(0, score - 1))];
+}
 
 export default function RecordDetail() {
   const { id } = useParams<{ id: string }>();
@@ -152,56 +158,26 @@ export default function RecordDetail() {
         </div>
       </div>
 
-      <div className="card" style={{ maxWidth: 640 }}>
+      <div className="detail-grid">
+        <div className="card detail-main">
         {!editing ? (
           <>
-            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
               <span className="badge" style={{ background: `${record.type_color}18`, color: record.type_color }}>
                 {record.type_name}
               </span>
               <span className="badge" style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)' }}>
-                폴더: {record.folder_name ?? '미분류'}
+                <FolderIcon /> {record.folder_name ?? '미분류'}
               </span>
-              <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>작성 {record.created_at?.slice(0, 16).replace('T', ' ')}</span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-faint)', marginLeft: 'auto' }}>
+                작성 {record.created_at?.slice(0, 16).replace('T', ' ')}
+              </span>
             </div>
-            <div className="field" style={{ whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.55 }}>
+            <div className="detail-content">
               {record.content || <span style={{ color: 'var(--text-faint)' }}>내용 없음</span>}
             </div>
-            <div
-              className="field"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '8px 12px',
-                fontSize: 12.5,
-                background: 'var(--bg-panel)',
-                borderRadius: 2,
-                padding: '8px 12px'
-              }}
-            >
-              <div>
-                <span style={{ color: 'var(--text-faint)' }}>상태 점수 </span>
-                <strong>{record.state_score ?? '-'}</strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-faint)' }}>후속조치 </span>
-                <strong style={{ color: !record.follow_up_needed ? undefined : record.follow_up_done ? 'var(--success)' : 'var(--danger)' }}>
-                  {!record.follow_up_needed ? '불필요' : record.follow_up_done ? '완료' : '대기'}
-                </strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-faint)' }}>생기부 반영 </span>
-                <strong style={{ color: record.reflected_in_nice ? 'var(--success)' : 'var(--danger)' }}>
-                  {record.reflected_in_nice ? '완료' : '미반영'}
-                </strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-faint)' }}>유관기관 연계 </span>
-                <strong>{record.referred_to ? record.referred_to.split(',').join(', ') : '-'}</strong>
-              </div>
-            </div>
             {savedRelations.length > 0 && (
-              <div className="field">
+              <div className="field" style={{ marginBottom: 0, paddingTop: 10 }}>
                 <label className="field-label">관련 대상</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {savedRelations.map((r) =>
@@ -227,12 +203,77 @@ export default function RecordDetail() {
                 </div>
               </div>
             )}
-            <div className="field" style={{ paddingTop: 10 }}>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div className="field" style={{ flex: 1 }}>
+                <label className="field-label">기록 유형</label>
+                <select className="select" value={typeId} onChange={(e) => setTypeId(Number(e.target.value))}>
+                  {types.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label className="field-label">상담 폴더</label>
+                <select
+                  className="select"
+                  value={folderId ?? ''}
+                  onChange={(e) => setFolderId(e.target.value === '' ? null : Number(e.target.value))}
+                >
+                  <option value="">미분류</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="field" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <label className="field-label">내용</label>
+              <textarea className="detail-textarea" value={content} onChange={(e) => setContent(e.target.value)} />
+            </div>
+          </>
+        )}
+        </div>
+
+        <div className="card detail-side">
+        {!editing ? (
+          <>
+            <div className="detail-meta">
+              <div className="detail-meta-item">
+                <span className="detail-meta-label">상태 점수</span>
+                <strong style={{ fontSize: 18, color: record.state_score != null ? scoreColorLocal(record.state_score) : undefined }}>
+                  {record.state_score ?? '-'}
+                </strong>
+              </div>
+              <div className="detail-meta-item">
+                <span className="detail-meta-label">후속조치</span>
+                <strong style={{ color: !record.follow_up_needed ? undefined : record.follow_up_done ? 'var(--success)' : 'var(--danger)' }}>
+                  {!record.follow_up_needed ? '불필요' : record.follow_up_done ? '완료' : '대기'}
+                </strong>
+              </div>
+              <div className="detail-meta-item">
+                <span className="detail-meta-label">생기부 반영</span>
+                <strong style={{ color: record.reflected_in_nice ? 'var(--success)' : 'var(--danger)' }}>
+                  {record.reflected_in_nice ? '완료' : '미반영'}
+                </strong>
+              </div>
+              <div className="detail-meta-item">
+                <span className="detail-meta-label">유관기관 연계</span>
+                <strong>{record.referred_to ? record.referred_to.split(',').join(', ') : '-'}</strong>
+              </div>
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
               <ActionList recordId={recordId} studentId={record.student_id} />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="detail-actions">
               <button className="btn btn-primary" onClick={() => setEditing(true)}>
-                수정
+                <EditIcon /> 수정
               </button>
               <button className="btn" onClick={() => setFolderPicker(true)}>
                 <FolderIcon /> 폴더에 넣기
@@ -251,35 +292,6 @@ export default function RecordDetail() {
         ) : (
           <>
             <div className="field">
-              <label className="field-label">기록 유형</label>
-              <select className="select" value={typeId} onChange={(e) => setTypeId(Number(e.target.value))}>
-                {types.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label className="field-label">상담 폴더</label>
-              <select
-                className="select"
-                value={folderId ?? ''}
-                onChange={(e) => setFolderId(e.target.value === '' ? null : Number(e.target.value))}
-              >
-                <option value="">미분류</option>
-                {folders.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label className="field-label">내용</label>
-              <textarea rows={5} value={content} onChange={(e) => setContent(e.target.value)} />
-            </div>
-            <div className="field">
               <label className="field-label">상태 점수</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[1, 2, 3, 4, 5].map((n) => (
@@ -287,7 +299,7 @@ export default function RecordDetail() {
                     key={n}
                     type="button"
                     className="btn"
-                    style={stateScore === n ? { background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' } : undefined}
+                    style={stateScore === n ? { background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)', flex: 1, justifyContent: 'center' } : { flex: 1, justifyContent: 'center' }}
                     onClick={() => setStateScore(n)}
                   >
                     {n}
@@ -296,7 +308,7 @@ export default function RecordDetail() {
               </div>
             </div>
             <div className="field">
-              <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 500 }}>
                   <input type="checkbox" checked={followUpNeeded} onChange={(e) => setFollowUpNeeded(e.target.checked)} />
                   후속조치 필요
@@ -307,6 +319,10 @@ export default function RecordDetail() {
                     완료됨
                   </label>
                 )}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 500 }}>
+                  <input type="checkbox" checked={reflectedInNice} onChange={(e) => setReflectedInNice(e.target.checked)} />
+                  생기부 반영 완료
+                </label>
               </div>
             </div>
             <div className="field">
@@ -321,12 +337,6 @@ export default function RecordDetail() {
               </div>
             </div>
             <div className="field">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 500 }}>
-                <input type="checkbox" checked={reflectedInNice} onChange={(e) => setReflectedInNice(e.target.checked)} />
-                생기부 반영 완료
-              </label>
-            </div>
-            <div className="field">
               <label className="field-label">관련 대상 (갈등 상대 등)</label>
               <RelationEditor
                 relations={relations}
@@ -335,7 +345,7 @@ export default function RecordDetail() {
                 mainStudentName={record.student_name}
               />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="detail-actions">
               <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
                 {saving ? '저장 중…' : '저장'}
               </button>
@@ -345,6 +355,7 @@ export default function RecordDetail() {
             </div>
           </>
         )}
+        </div>
       </div>
 
       {folderPicker && (
