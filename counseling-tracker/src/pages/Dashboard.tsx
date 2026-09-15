@@ -61,6 +61,11 @@ export default function Dashboard() {
 
   return (
     <div>
+      <div className="page-header">
+        <h1 className="page-title">대시보드</h1>
+        <p className="page-subtitle">오늘의 예약과 최근 기록, 대기 중인 조치를 한눈에</p>
+      </div>
+
       {alerts.length > 0 && (
         <div className="banner" onClick={() => navigate('/search', { state: { studentId: alerts[0].student_id } })}>
           <span className="banner-icon">
@@ -69,66 +74,6 @@ export default function Dashboard() {
           <span>
             {alerts.map((a) => a.name).join(', ')} 학생 — 최근 14일간 기록 급증. 클릭해서 확인하세요.
           </span>
-        </div>
-      )}
-
-      <div className="section">
-        <h2 className="section-title">현황</h2>
-        <div className="card stat-list">
-          {statCells.map((c) => (
-            <div key={c.label} className={'stat-row' + (c.alert ? ' alert' : '')}>
-              <span className="stat-label">{c.label}</span>
-              <span className="stat-value">{loading ? '—' : c.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {!loading && pinned.length > 0 && (
-        <div className="section">
-          <h2 className="section-title">즐겨찾기 학생</h2>
-          <div className="card pinned-list">
-            {pinned.map((s) => (
-              <button
-                key={s.id}
-                className="pinned-item"
-                onClick={() => navigate(`/students/${s.id}`)}
-                onContextMenu={(e) =>
-                  ctx.open(e, [
-                    { label: '학생 프로필 열기', onClick: () => navigate(`/students/${s.id}`) },
-                    { label: '기록 추가', onClick: () => navigate('/input', { state: { studentId: s.id, studentName: s.name } }) },
-                    {
-                      label: '즐겨찾기 해제',
-                      onClick: async () => {
-                        await window.api.togglePin(s.id);
-                        window.api.getPinnedStudents().then(setPinned);
-                      }
-                    }
-                  ])
-                }
-              >
-                <span className="pinned-avatar">{initials(s.name)}</span>
-                <span>{s.name}</span>
-                {s.grade != null && (
-                  <span style={{ color: 'var(--text-faint)', fontSize: 12 }}>
-                    {s.grade}-{s.class_no}
-                  </span>
-                )}
-                <span className="pinned-chevron">
-                  <ChevronRightIcon />
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!loading && (
-        <div className="section">
-          <h2 className="section-title">상담 이후 조치사항</h2>
-          <div className="card">
-            <ActionList showStudent compact pendingOnly onChanged={() => setActionsKey((k) => k + 1)} />
-          </div>
         </div>
       )}
 
@@ -234,6 +179,67 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* 현황·즐겨찾기·조치사항은 화면 아래쪽에 배치 */}
+      <div className="section">
+        <h2 className="section-title">현황</h2>
+        <div className="card stat-list">
+          {statCells.map((c) => (
+            <div key={c.label} className={'stat-row' + (c.alert ? ' alert' : '')}>
+              <span className="stat-label">{c.label}</span>
+              <span className="stat-value">{loading ? '—' : c.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {!loading && pinned.length > 0 && (
+        <div className="section">
+          <h2 className="section-title">즐겨찾기 학생</h2>
+          <div className="card pinned-list">
+            {pinned.map((s) => (
+              <button
+                key={s.id}
+                className="pinned-item"
+                onClick={() => navigate(`/students/${s.id}`)}
+                onContextMenu={(e) =>
+                  ctx.open(e, [
+                    { label: '학생 프로필 열기', onClick: () => navigate(`/students/${s.id}`) },
+                    { label: '기록 추가', onClick: () => navigate('/input', { state: { studentId: s.id, studentName: s.name } }) },
+                    {
+                      label: '즐겨찾기 해제',
+                      onClick: async () => {
+                        await window.api.togglePin(s.id);
+                        window.api.getPinnedStudents().then(setPinned);
+                      }
+                    }
+                  ])
+                }
+              >
+                <span className="pinned-avatar">{initials(s.name)}</span>
+                <span>{s.name}</span>
+                {s.grade != null && (
+                  <span style={{ color: 'var(--text-faint)', fontSize: 12 }}>
+                    {s.grade}-{s.class_no}
+                  </span>
+                )}
+                <span className="pinned-chevron">
+                  <ChevronRightIcon />
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && (
+        <div className="section">
+          <h2 className="section-title">상담 이후 조치사항</h2>
+          <div className="card">
+            <ActionList showStudent compact pendingOnly onChanged={() => setActionsKey((k) => k + 1)} />
+          </div>
+        </div>
+      )}
       {ctx.element}
     </div>
   );

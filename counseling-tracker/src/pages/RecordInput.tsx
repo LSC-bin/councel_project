@@ -148,6 +148,10 @@ export default function RecordInput() {
 
   return (
     <div>
+      <div className="page-header">
+        <h1 className="page-title">기록 입력</h1>
+        <p className="page-subtitle">상담 내용과 후속 조치를 기록합니다</p>
+      </div>
       <div className="input-grid">
         <div className="input-col-left">
           <div className="card input-card">
