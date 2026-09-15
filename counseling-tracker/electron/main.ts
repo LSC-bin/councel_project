@@ -10,13 +10,23 @@ const PASSWORD_SETTING_KEY = 'app_password_hash';
 const isDev = !app.isPackaged;
 
 function createWindow() {
+  const isMac = process.platform === 'darwin';
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 960,
     minHeight: 640,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f5f5f7',
     autoHideMenuBar: true,
+    // macOS: 네이티브 교통 신호등 버튼을 유지하면서 타이틀바를 콘텐츠에 통합(hiddenInset).
+    // 사이드바 vibrancy 영역이 타이틀바 역할을 하므로 frameless처럼 보이지만 시스템 버튼은 살아 있다.
+    ...(isMac
+      ? {
+          titleBarStyle: 'hiddenInset' as const,
+          trafficLightPosition: { x: 14, y: 14 },
+          vibrancy: 'sidebar' as const
+        }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
@@ -346,8 +356,10 @@ function afterDatabaseUnlocked() {
 }
 
 app.whenReady().then(async () => {
+  // 렌더러가 플랫폼을 감지할 수 있게 exposing — preload에서도 동일 값 전달
   const opened = await db.initDatabase();
   registerIpcHandlers();
+  ipcMain.handle('app:platform', () => process.platform);
   createWindow();
   if (opened) {
     checkReminders();

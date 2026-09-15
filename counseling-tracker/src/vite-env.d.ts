@@ -384,6 +384,7 @@ interface Window {
 
     getSetting: (key: string) => Promise<string | null>;
     setSetting: (key: string, value: string) => Promise<{ ok: boolean }>;
+    getPlatform: () => Promise<string>;
 
     bootState: () => Promise<{ encryptionEnabled: boolean; dbOpen: boolean; hasPassword: boolean }>;
     unlock: (password: string) => Promise<{ ok: boolean; error?: string }>;

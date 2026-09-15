@@ -89,6 +89,9 @@ const api = {
   getSetting: (key: string) => ipcRenderer.invoke('settings:get', key),
   setSetting: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),
 
+  // 플랫폼 (macOS 스타일 분기용)
+  getPlatform: () => ipcRenderer.invoke('app:platform'),
+
   // 앱 잠금 / 기록 암호화
   bootState: () => ipcRenderer.invoke('auth:bootState'),
   unlock: (password: string) => ipcRenderer.invoke('auth:unlock', password),

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import LockScreen from './components/LockScreen';
 import Dashboard from './pages/Dashboard';
@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 const LOCK_TIMEOUT_KEY = 'lock_timeout_minutes';
 
 export default function App() {
+  const location = useLocation();
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
   // DB 자체가 비밀번호로 잠겨 있는지(기록 암호화 모드). 이 경우 잠금 화면은
   // DB를 여는 '진입 비밀번호' 화면이 된다.
@@ -25,6 +26,10 @@ export default function App() {
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // macOS 실행 시 교통 신호등 여백 등 네이티브 스타일 분기
+    window.api.getPlatform?.().then((p) => {
+      if (p === 'darwin') document.documentElement.classList.add('platform-mac');
+    });
     window.api.bootState().then((boot) => {
       if (boot.encryptionEnabled && !boot.dbOpen) {
         // 기록 암호화 모드: DB를 열기 전까지 잠금 화면
@@ -98,18 +103,21 @@ export default function App() {
       <Sidebar onLockNow={hasPassword ? () => setLocked(true) : undefined} />
       <div className="main-area">
         <main className="content">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/input" element={<RecordInput />} />
-            <Route path="/search" element={<SearchView />} />
-            <Route path="/search/:id" element={<RecordDetail />} />
-            <Route path="/students" element={<StudentsView />} />
-            <Route path="/students/:id" element={<StudentDetail />} />
-            <Route path="/statistics" element={<Statistics />} />
-            <Route path="/relations" element={<RelationGraphView />} />
-            <Route path="/report" element={<ReportExport />} />
-            <Route path="/settings" element={<Settings onSettingsChanged={reloadLockTimeout} />} />
-          </Routes>
+          {/* 경로가 바뀔 때마다 key가 달라져 macOS풍 페이지 전환 애니메이션 재생 */}
+          <div key={location.pathname} className="page-anim" style={{ height: '100%' }}>
+            <Routes location={location}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/input" element={<RecordInput />} />
+              <Route path="/search" element={<SearchView />} />
+              <Route path="/search/:id" element={<RecordDetail />} />
+              <Route path="/students" element={<StudentsView />} />
+              <Route path="/students/:id" element={<StudentDetail />} />
+              <Route path="/statistics" element={<Statistics />} />
+              <Route path="/relations" element={<RelationGraphView />} />
+              <Route path="/report" element={<ReportExport />} />
+              <Route path="/settings" element={<Settings onSettingsChanged={reloadLockTimeout} />} />
+            </Routes>
+          </div>
         </main>
       </div>
     </div>

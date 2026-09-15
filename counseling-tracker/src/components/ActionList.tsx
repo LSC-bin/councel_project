@@ -190,7 +190,7 @@ export default function ActionList({
           {pendingOnly ? '대기 중인 조치사항이 없습니다.' : '등록된 조치사항이 없습니다.'}
         </p>
       ) : (
-        <div style={{ borderRadius: 2 }}>
+        <div style={{ borderRadius: 'var(--radius-sm)' }}>
           {actions.map((a) => {
             const overdue = !a.done && a.due_date && a.due_date < new Date().toISOString().slice(0, 10);
             return (

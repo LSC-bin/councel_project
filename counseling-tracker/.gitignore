@@ -7,3 +7,4 @@ dist/
 *.db-wal
 *.backup
 .DS_Store
+shots/*.png

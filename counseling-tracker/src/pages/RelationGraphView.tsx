@@ -505,7 +505,7 @@ export default function RelationGraphView() {
                     return (
                       <div
                         key={i}
-                        style={{ borderRadius: 2, padding: '6px 8px', fontSize: 12.5 }}
+                        style={{ borderRadius: 'var(--radius-sm)', padding: '6px 8px', fontSize: 12.5 }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ width: 14, height: 4, background: edgeColor(e.latestScore), display: 'inline-block', flexShrink: 0 }} />
