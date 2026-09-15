@@ -53,6 +53,10 @@ const api = {
   getPinnedStudents: () => ipcRenderer.invoke('students:pinned'),
   getUpcomingAppointments: (limit = 5) => ipcRenderer.invoke('stats:upcoming', limit),
   exportAnonymizedReport: () => ipcRenderer.invoke('report:exportAnonymized'),
+  exportNiceStyleReport: (opts?: { startDate?: string; endDate?: string }) => ipcRenderer.invoke('report:exportNiceStyle', opts),
+  printRecordPdf: (recordId: number) => ipcRenderer.invoke('print:record', recordId),
+  getAuditForRecord: (recordId: number) => ipcRenderer.invoke('audit:forRecord', recordId),
+  getRecentAudit: (limit?: number) => ipcRenderer.invoke('audit:recent', limit),
 
   // 백업 / 복원
   createBackupDialog: () => ipcRenderer.invoke('backup:create'),

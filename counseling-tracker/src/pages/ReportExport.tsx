@@ -4,6 +4,14 @@ import { AlertIcon, CheckIcon } from '../components/icons';
 export default function ReportExport() {
   const [snapshots, setSnapshots] = useState<{ name: string; size: number; modified: string }[]>([]);
   const [snapshotMsg, setSnapshotMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
+  const [niceStart, setNiceStart] = useState('');
+  const [niceEnd, setNiceEnd] = useState('');
+  const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [showAudit, setShowAudit] = useState(false);
+
+  useEffect(() => {
+    window.api.getRecentAudit(200).then(setAudit);
+  }, []);
 
   function refreshSnapshots() {
     window.api.listAutoSnapshots().then(setSnapshots);
@@ -20,6 +28,16 @@ export default function ReportExport() {
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [restorePath, setRestorePath] = useState<string | null>(null);
+
+  async function handleNiceStyle() {
+    setBusy('anon');
+    try {
+      const r = await window.api.exportNiceStyleReport({ startDate: niceStart || undefined, endDate: niceEnd || undefined });
+      if (r && !r.canceled) setMessage({ tone: 'ok', text: `실적 보고서를 저장했습니다 (${r.count}건).` });
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function handleAnonymized() {
     setBusy('anon');
@@ -118,6 +136,20 @@ export default function ReportExport() {
             학생명을 A학생·B학생…으로 치환한 엑셀 통계를 생성합니다. 회의·보고용으로 개인정보를 드러내지 않고 공유할 수 있습니다.
           </p>
           <button className="btn btn-primary" disabled={busy === 'anon'} onClick={handleAnonymized}>
+            {busy === 'anon' ? '생성 중…' : '엑셀 내보내기'}
+          </button>
+        </div>
+
+        <div className="card" style={{ flex: '1 1 300px' }}>
+          <div className="section-title">상담 실적 보고서 (보고·나이스 첨부용)</div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
+            월별·유형별·학년반별 실적과 기록 상세를 담은 엑셀을 생성합니다. 학생 실명이 포함되므로 교내 보고용으로만 사용하세요.
+          </p>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+            <input className="input" type="date" style={{ width: 140 }} value={niceStart} onChange={(e) => setNiceStart(e.target.value)} title="시작일(선택)" />
+            <input className="input" type="date" style={{ width: 140 }} value={niceEnd} onChange={(e) => setNiceEnd(e.target.value)} title="종료일(선택)" />
+          </div>
+          <button className="btn btn-primary" disabled={busy === 'anon'} onClick={handleNiceStyle}>
             {busy === 'anon' ? '생성 중…' : '엑셀 내보내기'}
           </button>
         </div>
@@ -242,6 +274,40 @@ export default function ReportExport() {
         >
           지금 스냅샷 저장
         </button>
+      </div>
+
+      <div className="card" style={{ marginTop: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="section-title" style={{ marginBottom: 0 }}>접근·수정 이력 (감사 로그)</div>
+          <button className="btn btn-sm" onClick={() => setShowAudit((v) => !v)}>
+            {showAudit ? '접기' : `펼치기 (${audit.length}건)`}
+          </button>
+        </div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 6, marginBottom: 0 }}>
+          기록 열람·수정·삭제·인쇄 이력이 이 PC에 암호화 상태로 보존됩니다. 원본을 고쳐도 이력은 지워지지 않습니다.
+        </p>
+        {showAudit && (
+          <table className="record-table audit-table" style={{ marginTop: 8 }}>
+            <thead>
+              <tr>
+                <th>시각</th>
+                <th>종류</th>
+                <th>학생</th>
+                <th>내용</th>
+              </tr>
+            </thead>
+            <tbody>
+              {audit.map((a) => (
+                <tr key={a.id}>
+                  <td style={{ whiteSpace: 'nowrap' }}>{String(a.at ?? '').slice(0, 16).replace('T', ' ')}</td>
+                  <td>{({ record_update: '수정', record_delete: '삭제', record_view: '열람', record_print: '인쇄' } as Record<string, string>)[a.kind] ?? a.kind}</td>
+                  <td>{a.student_name ?? '-'}</td>
+                  <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{a.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

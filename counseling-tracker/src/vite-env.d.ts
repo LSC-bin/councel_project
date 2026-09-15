@@ -188,6 +188,16 @@ interface QuickTemplate {
   text: string;
 }
 
+interface AuditEntry {
+  id: number;
+  at: string;
+  kind: string;
+  record_id: number | null;
+  student_id: number | null;
+  detail: string;
+  student_name?: string | null;
+}
+
 interface ConsultRecord {
   id: number;
   student_id: number;
@@ -337,6 +347,10 @@ interface Window {
     getPinnedStudents: () => Promise<Student[]>;
     getUpcomingAppointments: (limit?: number) => Promise<UpcomingAppointment[]>;
     exportAnonymizedReport: () => Promise<{ canceled: boolean; filePath?: string }>;
+    exportNiceStyleReport: (opts?: { startDate?: string; endDate?: string }) => Promise<{ canceled: boolean; filePath?: string; count?: number }>;
+    printRecordPdf: (recordId: number) => Promise<{ ok?: boolean; canceled?: boolean; filePath?: string; error?: string }>;
+    getAuditForRecord: (recordId: number) => Promise<AuditEntry[]>;
+    getRecentAudit: (limit?: number) => Promise<AuditEntry[]>;
     createBackupDialog: () => Promise<{ canceled: boolean; needPassword?: boolean; filePath?: string }>;
     createBackupWithPassword: (password: string, filePath: string) => Promise<{ ok: boolean; error?: string }>;
     restoreBackupDialog: () => Promise<{ canceled: boolean; needPassword?: boolean; filePath?: string }>;

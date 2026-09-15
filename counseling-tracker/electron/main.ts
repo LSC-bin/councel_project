@@ -1,7 +1,8 @@
 import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import * as db from './db/database';
-import { buildAnonymizedReport } from './report';
+import { buildAnonymizedReport, buildNiceStyleReport, buildRecordPrintHtml } from './report';
 import { hashPassword, verifyPassword } from './auth';
 
 const PASSWORD_SETTING_KEY = 'app_password_hash';
@@ -65,7 +66,11 @@ function registerIpcHandlers() {
 
   // 상담 기록
   ipcMain.handle('records:get', (_e, filter) => db.getRecords(filter));
-  ipcMain.handle('records:getById', (_e, id: number) => db.getRecordById(id));
+  ipcMain.handle('records:getById', (_e, id: number) => {
+    const r = db.getRecordById(id);
+    if (r) db.logAudit('record_view', id, (r as { student_id?: number }).student_id ?? null, '기록 열람');
+    return r;
+  });
   ipcMain.handle('records:add', (_e, record) => db.addRecord(record));
   ipcMain.handle('records:update', (_e, id: number, patch) => db.updateRecord(id, patch));
   ipcMain.handle('records:delete', (_e, id: number) => db.deleteRecord(id));
@@ -134,6 +139,50 @@ function registerIpcHandlers() {
   ipcMain.handle('appointments:add', (_e, input) => db.addAppointment(input));
   ipcMain.handle('appointments:update', (_e, id: number, patch) => db.updateAppointment(id, patch));
   ipcMain.handle('appointments:delete', (_e, id: number) => db.deleteAppointment(id));
+  // 상담 실적 보고서(학교 보고·나이스 첨부 양식) — 기간 지정 가능
+  ipcMain.handle('report:exportNiceStyle', async (_e, opts?: { startDate?: string; endDate?: string }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const result = await dialog.showSaveDialog({
+      title: '상담 실적 보고서 내보내기',
+      defaultPath: `상담실적보고서_${today}.xlsx`,
+      filters: [{ name: 'Excel', extensions: ['xlsx'] }]
+    });
+    if (result.canceled || !result.filePath) return { canceled: true };
+    const r = await buildNiceStyleReport(result.filePath, opts ?? {});
+    return { canceled: false, filePath: result.filePath, count: r.count };
+  });
+
+  // 기록 1건 인쇄/PDF — 숨김 창에서 A4 PDF로 렌더링
+  ipcMain.handle('print:record', async (_e, recordId: number) => {
+    const record = db.getRecordById(recordId);
+    if (!record) return { ok: false, error: '기록을 찾을 수 없습니다.' };
+    const relations = db.getRecordRelations(recordId);
+    const actions = db.getActions({ recordId });
+    const html = buildRecordPrintHtml(record as Record<string, unknown>, relations as Record<string, unknown>[], actions as Record<string, unknown>[]);
+
+    const result = await dialog.showSaveDialog({
+      title: '상담 기록 인쇄(PDF)',
+      defaultPath: `상담기록_${(record as { student_name?: string }).student_name ?? ''}_${(record as { record_date?: string }).record_date ?? ''}.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+    if (result.canceled || !result.filePath) return { canceled: true };
+
+    const win = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true, nodeIntegration: false } });
+    try {
+      await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+      const pdf = await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4' });
+      fs.writeFileSync(result.filePath, pdf);
+      db.logAudit('record_print', recordId, (record as { student_id?: number }).student_id ?? null, 'PDF 인쇄');
+      return { ok: true, filePath: result.filePath };
+    } finally {
+      win.destroy();
+    }
+  });
+
+  // 감사 로그 조회
+  ipcMain.handle('audit:forRecord', (_e, recordId: number) => db.getAuditForRecord(recordId));
+  ipcMain.handle('audit:recent', (_e, limit?: number) => db.getRecentAudit(limit ?? 100));
+
   ipcMain.handle('report:exportAnonymized', async () => {
     const today = new Date().toISOString().slice(0, 10);
     const result = await dialog.showSaveDialog({

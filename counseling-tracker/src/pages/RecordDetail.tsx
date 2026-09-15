@@ -1,7 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { RelationEditor } from './recordShared';
-import { TrashIcon, BackIcon, CalendarIcon, FolderIcon, EditIcon } from '../components/icons';
+import { TrashIcon, BackIcon, CalendarIcon, FolderIcon, EditIcon, PrintIcon, ChevronRightIcon } from '../components/icons';
+
+const AUDIT_KIND_LABELS: Record<string, string> = {
+  record_update: '수정',
+  record_delete: '삭제',
+  record_view: '열람',
+  record_print: '인쇄'
+};
+
+function ChevronRightIconWrap({ open }: { open: boolean }) {
+  return (
+    <span style={{ display: 'inline-flex', transform: open ? 'rotate(90deg)' : undefined, transition: 'transform 0.1s' }}>
+      <ChevronRightIcon />
+    </span>
+  );
+}
 import { Avatar, formatClassInfo } from './studentShared';
 import ActionList from '../components/ActionList';
 import Modal from '../components/Modal';
@@ -42,6 +57,9 @@ export default function RecordDetail() {
   const [relations, setRelations] = useState<RecordRelationInput[]>([]);
   const [savedRelations, setSavedRelations] = useState<RecordRelation[]>([]);
   const [saving, setSaving] = useState(false);
+  const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [showAudit, setShowAudit] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   function loadRelations() {
     window.api.getRecordRelations(recordId).then((rows) => {
@@ -84,8 +102,10 @@ export default function RecordDetail() {
     }
     setNotFound(false);
     setEditing(false);
+    setShowAudit(false);
     loadRecord();
     loadRelations();
+    window.api.getAuditForRecord(recordId).then(setAudit);
     window.api.getConsultTypes().then(setTypes);
     window.api.getFolders().then(setFolders);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,8 +132,21 @@ export default function RecordDetail() {
       setEditing(false);
       loadRecord();
       loadRelations();
+      window.api.getAuditForRecord(recordId).then(setAudit);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePrint() {
+    setPrinting(true);
+    try {
+      const r = await window.api.printRecordPdf(recordId);
+      if (r && r.ok) {
+        window.api.getAuditForRecord(recordId).then(setAudit);
+      }
+    } finally {
+      setPrinting(false);
     }
   }
 
@@ -275,9 +308,30 @@ export default function RecordDetail() {
             <div className="field" style={{ marginBottom: 0 }}>
               <ActionList recordId={recordId} studentId={record.student_id} />
             </div>
+            {audit.length > 0 && (
+              <div className="audit-box">
+                <button type="button" className="audit-toggle" onClick={() => setShowAudit((v) => !v)}>
+                  <ChevronRightIconWrap open={showAudit} /> 수정·열람 이력 {audit.length}건
+                </button>
+                {showAudit && (
+                  <ul className="audit-list">
+                    {audit.map((a) => (
+                      <li key={a.id}>
+                        <span className="audit-at">{String(a.at ?? '').slice(0, 16).replace('T', ' ')}</span>{' '}
+                        <span className="audit-kind">{AUDIT_KIND_LABELS[a.kind] ?? a.kind}</span>{' '}
+                        <span className="audit-detail">{a.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             <div className="detail-actions">
               <button className="btn btn-primary" onClick={() => setEditing(true)}>
                 <EditIcon /> 수정
+              </button>
+              <button className="btn" disabled={printing} onClick={handlePrint} title="이 기록을 A4 PDF로 저장합니다">
+                <PrintIcon /> {printing ? '생성 중…' : '인쇄'}
               </button>
               <button className="btn" onClick={() => setFolderPicker(true)}>
                 <FolderIcon /> 폴더에 넣기

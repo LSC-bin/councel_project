@@ -142,6 +142,15 @@ CREATE TABLE IF NOT EXISTS record_actions (
     due_date DATE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY,
+    at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    kind TEXT NOT NULL,
+    record_id INTEGER,
+    student_id INTEGER,
+    detail TEXT
+);
 `;
 
 let db: SqlJsDatabase;
@@ -701,9 +710,52 @@ export function addRecord(record: NewRecord) {
   return get('SELECT * FROM consult_records WHERE id = ?', [id]);
 }
 
+// 감사 로그: 기록 수정·삭제·열람을 남긴다. 원본을 덮어쓰더라도 이력은 보존(FERPA 계열 원칙).
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  record_date: '상담일',
+  type_id: '유형',
+  folder_id: '폴더',
+  content: '내용',
+  state_score: '상태 점수',
+  follow_up_needed: '후속조치 필요',
+  follow_up_done: '후속조치 완료',
+  referred_to: '유관기관 연계',
+  reflected_in_nice: '생기부 반영',
+  next_appointment: '다음 예약'
+};
+
+function norm(v: unknown): string {
+  if (v === null || v === undefined || v === '') return '-';
+  if (typeof v === 'boolean') return v ? '예' : '아니오';
+  if (typeof v === 'number' && (v === 0 || v === 1)) return String(v);
+  const s = String(v);
+  return s.length > 40 ? s.slice(0, 40) + '…' : s;
+}
+
+export function logAudit(kind: string, recordId: number | null, studentId: number | null, detail: string) {
+  db.run('INSERT INTO audit_log (kind, record_id, student_id, detail) VALUES (?, ?, ?, ?)', [
+    kind,
+    recordId,
+    studentId,
+    detail
+  ]);
+  persist();
+}
+
+export function getAuditForRecord(recordId: number) {
+  return all(`SELECT a.*, s.name as student_name FROM audit_log a LEFT JOIN students s ON s.id = a.student_id WHERE a.record_id = ? ORDER BY a.id DESC LIMIT 50`, [recordId]);
+}
+
+export function getRecentAudit(limit = 100) {
+  return all(
+    `SELECT a.*, s.name as student_name FROM audit_log a LEFT JOIN students s ON s.id = a.student_id ORDER BY a.id DESC LIMIT ${Number(limit) || 100}`
+  );
+}
+
 export function updateRecord(id: number, patch: Partial<NewRecord>) {
   const fields = Object.keys(patch) as (keyof NewRecord)[];
   if (fields.length > 0) {
+    const before = get('SELECT * FROM consult_records WHERE id = ?', [id]) as Record<string, unknown> | undefined;
     const setClause = fields.map((f) => `${f} = ?`).join(', ');
     const values = fields.map((f) => {
       const v = patch[f];
@@ -711,11 +763,37 @@ export function updateRecord(id: number, patch: Partial<NewRecord>) {
       return v ?? null;
     }) as SqlValue[];
     run(`UPDATE consult_records SET ${setClause} WHERE id = ?`, [...values, id]);
+    // 실제 값이 바뀐 필드만 이력으로 남긴다
+    if (before) {
+      const changes: string[] = [];
+      for (const fld of fields) {
+        const oldV = before[fld as string];
+        const newV = patch[fld];
+        const oldN = norm(typeof oldV === 'number' && (oldV === 0 || oldV === 1) && typeof newV === 'boolean' ? oldV === 1 : oldV);
+        const newN = norm(newV);
+        if (oldN !== newN) changes.push(`${AUDIT_FIELD_LABELS[fld as string] ?? fld}: ${oldN} → ${newN}`);
+      }
+      if (changes.length > 0) {
+        logAudit('record_update', id, (before.student_id as number) ?? null, changes.join(' / '));
+      }
+    }
   }
   return get('SELECT * FROM consult_records WHERE id = ?', [id]);
 }
 
 export function deleteRecord(id: number) {
+  const before = get(
+    `SELECT r.*, s.name as student_name, t.name as type_name FROM consult_records r JOIN students s ON s.id = r.student_id LEFT JOIN consult_types t ON t.id = r.type_id WHERE r.id = ?`,
+    [id]
+  ) as Record<string, unknown> | undefined;
+  if (before) {
+    logAudit(
+      'record_delete',
+      id,
+      (before.student_id as number) ?? null,
+      `${before.student_name ?? '?'} · ${before.record_date ?? ''} · ${before.type_name ?? ''} · 내용 ${(String(before.content ?? '').slice(0, 40) || '(없음)')}`
+    );
+  }
   db.run('DELETE FROM record_relations WHERE record_id = ?', [id]);
   db.run('DELETE FROM record_actions WHERE record_id = ?', [id]);
   db.run('DELETE FROM consult_records WHERE id = ?', [id]);

@@ -188,6 +188,16 @@ export function DocIcon({ size = 22 }: { size?: number }) {
   );
 }
 
+export function PrintIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.5 6V2.5h7V6" />
+      <rect x="2.5" y="6" width="11" height="5" rx="1" />
+      <path d="M4.5 9.5h7v4h-7z" />
+    </svg>
+  );
+}
+
 /* ---------- 사이드바 내비 아이콘 (14px, 단색) ---------- */
 
 export function NavHomeIcon() {

@@ -989,6 +989,60 @@ label.field-label {
   padding: 8px;
 }
 
+/* ---------- 수정·열람 이력(감사 로그) ---------- */
+.audit-box {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.audit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.audit-toggle:hover {
+  color: var(--accent-strong);
+}
+
+.audit-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audit-list li {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.audit-at {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.audit-kind {
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.audit-detail {
+  color: var(--text-secondary);
+}
+
 /* ---------- 기록 상세: 좌(내용)·우(상태/조치) 2패널, 빈공간 없이 꽉 채움 ---------- */
 .detail-grid {
   display: flex;
