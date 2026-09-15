@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { RelationEditor } from './recordShared';
 import { TrashIcon, BackIcon, CalendarIcon, FolderIcon, EditIcon } from '../components/icons';
 import { Avatar, formatClassInfo } from './studentShared';
@@ -18,6 +18,10 @@ export default function RecordDetail() {
   const { id } = useParams<{ id: string }>();
   const recordId = Number(id);
   const navigate = useNavigate();
+  const location = useLocation();
+  // 어디서 들어왔는지: 학생 프로필에서 오면 뒤로가기 시 그곳으로, 아니면 조회·검색으로
+  const backTo = (location.state as { from?: string } | null)?.from ?? '/search';
+  const backLabel = (location.state as { fromLabel?: string } | null)?.fromLabel ?? '조회·검색';
 
   const [record, setRecord] = useState<ConsultRecord | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
@@ -116,14 +120,14 @@ export default function RecordDetail() {
   async function handleDelete() {
     if (!confirm('이 기록을 삭제할까요? 되돌릴 수 없습니다.')) return;
     await window.api.deleteRecord(recordId);
-    navigate('/search');
+    navigate(backTo);
   }
 
   if (notFound) {
     return (
       <div>
         <div className="page-header">
-          <button className="back-btn" onClick={() => navigate('/search')} title="조회·검색으로 돌아가기">
+          <button className="back-btn" onClick={() => navigate(backTo)} title={`${backLabel}으로 돌아가기`}>
             <BackIcon />
           </button>
         </div>
@@ -139,7 +143,7 @@ export default function RecordDetail() {
   return (
     <div>
       <div className="page-header" style={{ alignItems: 'center' }}>
-        <button className="back-btn" onClick={() => navigate('/search')} title="조회·검색으로 돌아가기">
+        <button className="back-btn" onClick={() => navigate(backTo)} title={`${backLabel}으로 돌아가기`}>
           <BackIcon />
         </button>
         <Avatar name={record.student_name} size={34} />

@@ -270,7 +270,10 @@ export default function StudentDetail() {
               <div style={{ padding: '8px 12px' }}>
                 <span className="section-title" style={{ margin: 0, border: 'none', padding: 0 }}>이전 상담 요약 (최근 5건)</span>
               </div>
-              <DigestRecent digest={digest} onOpenRecord={(rid) => navigate(`/search/${rid}`)} />
+              <DigestRecent
+                digest={digest}
+                onOpenRecord={(rid) => navigate(`/search/${rid}`, { state: { from: `/students/${student.id}`, fromLabel: '학생 프로필' } })}
+              />
             </div>
           )}
         </div>
@@ -330,10 +333,10 @@ export default function StudentDetail() {
                       <tr
                         key={r.id}
                         style={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/search/${r.id}`)}
+                        onClick={() => navigate(`/search/${r.id}`, { state: { from: `/students/${student.id}`, fromLabel: '학생 프로필' } })}
                         onContextMenu={(e) =>
                           ctx.open(e, [
-                            { label: '기록 열기', onClick: () => navigate(`/search/${r.id}`) },
+                            { label: '기록 열기', onClick: () => navigate(`/search/${r.id}`, { state: { from: `/students/${student.id}`, fromLabel: '학생 프로필' } }) },
                             { label: '예약 잡기', onClick: () => navigate('/', { state: { studentId: r.student_id, studentName: student.name } }) },
                             {
                               label: '기록 삭제',
