@@ -148,14 +148,9 @@ export default function RecordInput() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">기록 입력</h1>
-        <p className="page-subtitle">오늘의 학생 기록을 남기세요.</p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="card">
+      <div className="input-grid">
+        <div className="input-col-left">
+          <div className="card input-card">
             <div className="field" style={{ position: 'relative', marginBottom: pinned.length > 0 ? 10 : 0 }}>
               <label className="field-label">학생 *</label>
               {selectedStudent ? (
@@ -307,16 +302,16 @@ export default function RecordInput() {
           </div>
         </div>
 
-        <div style={{ flex: '2 1 380px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="card">
-            <div className="field">
+        <div className="input-col-right">
+          <div className="card input-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="field" style={{ display: 'flex', flexDirection: 'column', flex: 1, marginBottom: 0 }}>
               <label className="field-label">내용</label>
               <textarea
                 ref={textareaRef}
-                rows={8}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="기록 내용을 입력하세요"
+                style={{ flex: 1, minHeight: 120, resize: 'none' }}
               />
             </div>
 

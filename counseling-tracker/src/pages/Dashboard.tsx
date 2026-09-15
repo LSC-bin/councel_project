@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import MetricCard from '../components/MetricCard';
 import Calendar from '../components/Calendar';
 import ActionList from '../components/ActionList';
 import { useContextMenu } from '../components/ContextMenu';
@@ -52,13 +51,16 @@ export default function Dashboard() {
 
   const maxTypeCount = stats?.byType.length ? Math.max(...stats.byType.map((t) => t.count)) : 0;
 
+  const statCells = [
+    { label: '이번 달 기록', value: stats?.thisMonthCount ?? 0 },
+    { label: '후속조치 대기', value: stats?.followUpPending ?? 0, alert: (stats?.followUpPending ?? 0) > 0 },
+    { label: '조치사항 대기', value: pendingActionCount, alert: pendingActionCount > 0 },
+    { label: '등록 학생', value: stats?.studentCount ?? 0 },
+    { label: '생기부 미반영', value: stats?.niceUnreflectedCount ?? 0, alert: (stats?.niceUnreflectedCount ?? 0) > 0 }
+  ];
+
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">대시보드</h1>
-        <p className="page-subtitle">오늘의 학생 현황을 한눈에 확인하세요.</p>
-      </div>
-
       {alerts.length > 0 && (
         <div className="banner" onClick={() => navigate('/search', { state: { studentId: alerts[0].student_id } })}>
           <span className="banner-icon">
@@ -70,41 +72,47 @@ export default function Dashboard() {
         </div>
       )}
 
+      <div className="stat-strip">
+        {statCells.map((c) => (
+          <div key={c.label} className={'stat-cell' + (c.alert ? ' alert' : '')}>
+            <div className="stat-label">{c.label}</div>
+            <div className="stat-value">{loading ? '—' : c.value}</div>
+          </div>
+        ))}
+      </div>
+
       {!loading && pinned.length > 0 && (
-        <div className="pinned-row">
-          {pinned.map((s) => (
-            <button
-              key={s.id}
-              className="pinned-chip"
-              onClick={() => navigate(`/students/${s.id}`)}
-              onContextMenu={(e) =>
-                ctx.open(e, [
-                  { label: '학생 프로필 열기', onClick: () => navigate(`/students/${s.id}`) },
-                  { label: '기록 추가', onClick: () => navigate('/input', { state: { studentId: s.id, studentName: s.name } }) },
-                  {
-                    label: '즐겨찾기 해제',
-                    onClick: async () => {
-                      await window.api.togglePin(s.id);
-                      window.api.getPinnedStudents().then(setPinned);
-                    }
+        <div className="section">
+          <h2 className="section-title">즐겨찾기 학생</h2>
+          <div className="card" style={{ padding: '8px 10px' }}>
+            <div className="pinned-row" style={{ marginBottom: 0 }}>
+              {pinned.map((s) => (
+                <button
+                  key={s.id}
+                  className="pinned-chip"
+                  onClick={() => navigate(`/students/${s.id}`)}
+                  onContextMenu={(e) =>
+                    ctx.open(e, [
+                      { label: '학생 프로필 열기', onClick: () => navigate(`/students/${s.id}`) },
+                      { label: '기록 추가', onClick: () => navigate('/input', { state: { studentId: s.id, studentName: s.name } }) },
+                      {
+                        label: '즐겨찾기 해제',
+                        onClick: async () => {
+                          await window.api.togglePin(s.id);
+                          window.api.getPinnedStudents().then(setPinned);
+                        }
+                      }
+                    ])
                   }
-                ])
-              }
-            >
-              <span className="pinned-avatar">{initials(s.name)}</span>
-              <span>{s.name}</span>
-            </button>
-          ))}
+                >
+                  <span className="pinned-avatar">{initials(s.name)}</span>
+                  <span>{s.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="metric-grid">
-        <MetricCard label="이번 달 기록 건수" value={loading ? '—' : stats?.thisMonthCount ?? 0} />
-        <MetricCard label="후속조치 대기" value={loading ? '—' : stats?.followUpPending ?? 0} />
-        <MetricCard label="조치사항 대기" value={loading ? '—' : pendingActionCount} alert={pendingActionCount > 0} />
-        <MetricCard label="등록 학생 수" value={loading ? '—' : stats?.studentCount ?? 0} />
-        <MetricCard label="생기부 미반영" value={loading ? '—' : stats?.niceUnreflectedCount ?? 0} />
-      </div>
 
       {!loading && (
         <div className="section">

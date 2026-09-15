@@ -97,10 +97,6 @@ export default function App() {
     <div className="app-shell">
       <Sidebar onLockNow={hasPassword ? () => setLocked(true) : undefined} />
       <div className="main-area">
-        <div className="top-banner">
-          <span className="top-banner-title">학생 상담·생활지도 기록</span>
-          <span className="top-banner-sub">모든 기록은 이 PC에만 암호화 저장됩니다 · 외부 전송 없음</span>
-        </div>
         <main className="content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
