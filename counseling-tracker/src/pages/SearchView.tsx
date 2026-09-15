@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FolderIcon, PlusIcon, ChevronRightIcon, DotsIcon, SortIcon } from '../components/icons';
 import { useContextMenu } from '../components/ContextMenu';
@@ -18,8 +18,11 @@ export default function SearchView() {
   const [types, setTypes] = useState<ConsultType[]>([]);
   const [folders, setFolders] = useState<RecordFolder[]>([]);
   const [folderFilter, setFolderFilter] = useState<FolderFilter>(navState?.folderId ?? 'all');
-  const [newFolderName, setNewFolderName] = useState('');
-  const [newFolderParent, setNewFolderParent] = useState<number | null>(null);
+  const [folderModal, setFolderModal] = useState<{ parentId: number | null } | null>(null);
+  const [modalFolderName, setModalFolderName] = useState('');
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const renameCancelled = useRef(false);
   const [folderError, setFolderError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
@@ -39,7 +42,7 @@ export default function SearchView() {
   const [movingRecord, setMovingRecord] = useState<ConsultRecord | null>(null);
   const [dragRecordId, setDragRecordId] = useState<number | null>(null);
   const [dragFolderId, setDragFolderId] = useState<number | null>(null);
-  const [dropTarget, setDropTarget] = useState<number | 'none' | null>(null);
+  const [dropTarget, setDropTarget] = useState<number | 'none' | 'root' | null>(null);
 
   function refreshFolders() {
     window.api.getFolders().then(setFolders);
@@ -89,23 +92,41 @@ export default function SearchView() {
     }
   }
 
-  async function handleAddFolder(parentId: number | null) {
-    if (!newFolderName.trim()) return;
+  async function handleAddFolder(name: string, parentId: number | null): Promise<boolean> {
+    if (!name.trim()) return false;
     setFolderError(null);
-    const result = await window.api.addFolder(newFolderName, parentId);
+    const result = await window.api.addFolder(name, parentId);
     if (!result.ok) {
       setFolderError(result.error ?? '폴더를 만들 수 없습니다.');
-      return;
+      return false;
     }
-    setNewFolderName('');
-    setNewFolderParent(null);
     if (parentId != null) setExpanded((cur) => new Set(cur).add(parentId));
     refreshFolders();
+    return true;
   }
 
-  async function handleRenameFolder(f: RecordFolder) {
-    const name = prompt('새 폴더 이름', f.name);
-    if (name == null || name.trim() === '' || name === f.name) return;
+  function openFolderModal(parentId: number | null) {
+    setModalFolderName('');
+    setFolderError(null);
+    setFolderModal({ parentId });
+  }
+
+  // 인라인 이름 변경: 행 안의 입력창에서 Enter/포커스 잃음 = 확정, Esc = 취소
+  function startRename(f: RecordFolder) {
+    renameCancelled.current = false;
+    setRenamingId(f.id);
+    setRenameValue(f.name);
+  }
+
+  async function commitRename(f: RecordFolder) {
+    if (renameCancelled.current) {
+      renameCancelled.current = false;
+      setRenamingId(null);
+      return;
+    }
+    const name = renameValue.trim();
+    setRenamingId(null);
+    if (!name || name === f.name) return;
     const result = await window.api.renameFolder(f.id, name);
     if (!result.ok) {
       alert(result.error ?? '이름을 바꿀 수 없습니다.');
@@ -226,16 +247,40 @@ export default function SearchView() {
               <ChevronRightIcon />
             </span>
           </button>
-          <button
-            type="button"
-            className="folder-item"
-            style={{ flex: 1, paddingLeft: 4 }}
-            title="이 폴더와 하위 폴더의 기록을 모두 봅니다"
-            onClick={() => openFolder(f)}
-          >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-            <span className="folder-count">{subtreeCount(f.id)}</span>
-          </button>
+          {renamingId === f.id ? (
+            <input
+              className="input folder-rename-input"
+              style={{ flex: 1, marginLeft: 4, padding: '2px 6px', fontSize: 12.5 }}
+              value={renameValue}
+              autoFocus
+              onChange={(e) => setRenameValue(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitRename(f);
+                else if (e.key === 'Escape') {
+                  renameCancelled.current = true;
+                  setRenamingId(null);
+                }
+              }}
+              onBlur={() => commitRename(f)}
+            />
+          ) : (
+            <button
+              type="button"
+              className="folder-item"
+              style={{ flex: 1, paddingLeft: 4 }}
+              title="클릭: 이 폴더와 하위 폴더의 기록을 모두 봅니다 · 더블클릭: 이름 변경"
+              onClick={() => openFolder(f)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                startRename(f);
+              }}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+              <span className="folder-count">{subtreeCount(f.id)}</span>
+            </button>
+          )}
           {/* 점3개 메뉴: 폴더 관리(추가·이름 변경·삭제) */}
           <button
             type="button"
@@ -257,13 +302,9 @@ export default function SearchView() {
       { label: '이 폴더 열기', onClick: () => openFolder(f) },
       {
         label: '하위 폴더 만들기',
-        onClick: () => {
-          setNewFolderParent(f.id);
-          setNewFolderName('');
-          setExpanded((cur) => new Set(cur).add(f.id));
-        }
+        onClick: () => openFolderModal(f.id)
       },
-      { label: '이름 변경', onClick: () => handleRenameFolder(f) },
+      { label: '이름 변경', onClick: () => startRename(f) },
       { label: '폴더 삭제', danger: true, separatorBefore: true, onClick: () => handleDeleteFolder(f) }
     ];
   }
@@ -288,15 +329,28 @@ export default function SearchView() {
               className="btn-icon"
               title="최상위 폴더 만들기"
               style={{ marginLeft: 'auto', width: 20, height: 20 }}
-              onClick={() => {
-                setNewFolderParent(null);
-                setNewFolderName('');
-              }}
+              onClick={() => openFolderModal(null)}
             >
               <PlusIcon />
             </button>
           </div>
-          <div className="folder-list">
+          <div
+            className="folder-list"
+            onDragOver={(e) => {
+              // 폴더를 트리 바깥(목록 여백)에 놓으면 최상위로 이동
+              if (dragFolderId == null) return;
+              e.preventDefault();
+              setDropTarget((t) => (t === 'root' ? t : 'root'));
+            }}
+            onDrop={(e) => {
+              if (dragFolderId == null) return;
+              e.preventDefault();
+              handleMoveFolder(dragFolderId, null, null);
+              setDragFolderId(null);
+              setDropTarget(null);
+            }}
+            style={{ outline: dropTarget === 'root' ? '2px dashed var(--accent)' : undefined, outlineOffset: -2 }}
+          >
             <button
               type="button"
               className={'folder-item' + (folderFilter === 'all' ? ' active' : '')}
@@ -335,26 +389,9 @@ export default function SearchView() {
             </button>
             {rootFolders.map((f) => renderFolderRow(f, 0))}
           </div>
-          <div style={{ display: 'flex', gap: 4, padding: '8px 8px 2px' }}>
-            <input
-              className="input"
-              placeholder={newFolderParent != null ? `하위 폴더 이름 (${folders.find((f) => f.id === newFolderParent)?.name ?? ''})` : '새 폴더 이름'}
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddFolder(newFolderParent)}
-            />
-            <button className="btn btn-primary btn-sm" disabled={!newFolderName.trim()} onClick={() => handleAddFolder(newFolderParent)} title="폴더 추가">
-              <PlusIcon />
-            </button>
-          </div>
-          {newFolderParent != null && (
-            <button className="btn btn-sm" style={{ margin: '2px 8px' }} onClick={() => setNewFolderParent(null)}>
-              최상위로 만들기
-            </button>
-          )}
           {folderError && <p style={{ color: 'var(--danger)', fontSize: 11.5, padding: '4px 8px 0', margin: 0 }}>{folderError}</p>}
           <p style={{ color: 'var(--text-faint)', fontSize: 11, padding: '6px 8px 0', margin: 0 }}>
-            폴더를 끌어다 놓아 순서·위치를 바꾸고, 기록 행을 폴더 위에 놓으면 그 폴더로 이동합니다.
+            폴더를 폴더 위로 끌면 하위로, 목록 여백으로 끌면 최상위로 이동합니다. 더블클릭 또는 점3개 메뉴로 이름을 바꿉니다.
           </p>
         </div>
 
@@ -492,6 +529,46 @@ export default function SearchView() {
           </div>
         </div>
       </div>
+
+      {folderModal && (
+        <Modal
+          title={folderModal.parentId != null ? `하위 폴더 만들기 — ${folders.find((x) => x.id === folderModal.parentId)?.name ?? ''}` : '최상위 폴더 만들기'}
+          onClose={() => setFolderModal(null)}
+          maxWidth={340}
+        >
+          <div className="field" style={{ marginBottom: 10 }}>
+            <label className="field-label">폴더 이름</label>
+            <input
+              className="input"
+              autoFocus
+              placeholder="예: 위기학생 관리"
+              value={modalFolderName}
+              onChange={(e) => setModalFolderName(e.target.value)}
+              onKeyDown={async (e) => {
+                if (e.key !== 'Enter') return;
+                const ok = await handleAddFolder(modalFolderName, folderModal.parentId);
+                if (ok) setFolderModal(null);
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-sm" onClick={() => setFolderModal(null)}>
+              취소
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={!modalFolderName.trim()}
+              onClick={async () => {
+                const ok = await handleAddFolder(modalFolderName, folderModal.parentId);
+                if (ok) setFolderModal(null);
+              }}
+            >
+              만들기
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {movingRecord && (
         <Modal title="기록 폴더 이동" onClose={() => setMovingRecord(null)} maxWidth={360}>
