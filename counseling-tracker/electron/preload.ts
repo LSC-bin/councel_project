@@ -92,6 +92,12 @@ const api = {
   // 플랫폼 (macOS 스타일 분기용)
   getPlatform: () => ipcRenderer.invoke('app:platform'),
 
+  // 윈도우 컨트롤 (프레임리스)
+  winMinimize: () => ipcRenderer.invoke('window:minimize'),
+  winToggleMaximize: () => ipcRenderer.invoke('window:toggleMaximize'),
+  winClose: () => ipcRenderer.invoke('window:close'),
+  winIsMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+
   // 앱 잠금 / 기록 암호화
   bootState: () => ipcRenderer.invoke('auth:bootState'),
   unlock: (password: string) => ipcRenderer.invoke('auth:unlock', password),

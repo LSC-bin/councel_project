@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { LockIcon } from './icons';
+import WindowControls from './WindowControls';
 
 // dbLock=true면 단순 앱 잠금이 아니라 DB 자체가 비밀번호로 암호화된 상태다.
 // 이 경우 비밀번호 검증 대신 unlock(DB 복호화)을 호출한다.
@@ -49,6 +50,7 @@ export default function LockScreen({ onUnlock, dbLock = false }: { onUnlock: () 
 
   return (
     <div className="lock-screen">
+      <WindowControls />
       <form onSubmit={handleSubmit}>
         <div className="lock-card" ref={cardRef}>
           <div className="lock-avatar">

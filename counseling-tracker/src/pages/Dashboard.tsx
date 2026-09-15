@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Calendar from '../components/Calendar';
 import ActionList from '../components/ActionList';
 import { useContextMenu } from '../components/ContextMenu';
-import { AlertIcon, PlusIcon } from '../components/icons';
+import { AlertIcon, ChevronRightIcon, PlusIcon } from '../components/icons';
 
 function initials(name: string) {
   return name.slice(0, 1);
@@ -72,44 +72,53 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="stat-strip">
-        {statCells.map((c) => (
-          <div key={c.label} className={'stat-cell' + (c.alert ? ' alert' : '')}>
-            <div className="stat-label">{c.label}</div>
-            <div className="stat-value">{loading ? '—' : c.value}</div>
-          </div>
-        ))}
+      <div className="section">
+        <h2 className="section-title">현황</h2>
+        <div className="card stat-list">
+          {statCells.map((c) => (
+            <div key={c.label} className={'stat-row' + (c.alert ? ' alert' : '')}>
+              <span className="stat-label">{c.label}</span>
+              <span className="stat-value">{loading ? '—' : c.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {!loading && pinned.length > 0 && (
         <div className="section">
           <h2 className="section-title">즐겨찾기 학생</h2>
-          <div className="card" style={{ padding: '8px 10px' }}>
-            <div className="pinned-row" style={{ marginBottom: 0 }}>
-              {pinned.map((s) => (
-                <button
-                  key={s.id}
-                  className="pinned-chip"
-                  onClick={() => navigate(`/students/${s.id}`)}
-                  onContextMenu={(e) =>
-                    ctx.open(e, [
-                      { label: '학생 프로필 열기', onClick: () => navigate(`/students/${s.id}`) },
-                      { label: '기록 추가', onClick: () => navigate('/input', { state: { studentId: s.id, studentName: s.name } }) },
-                      {
-                        label: '즐겨찾기 해제',
-                        onClick: async () => {
-                          await window.api.togglePin(s.id);
-                          window.api.getPinnedStudents().then(setPinned);
-                        }
+          <div className="card pinned-list">
+            {pinned.map((s) => (
+              <button
+                key={s.id}
+                className="pinned-item"
+                onClick={() => navigate(`/students/${s.id}`)}
+                onContextMenu={(e) =>
+                  ctx.open(e, [
+                    { label: '학생 프로필 열기', onClick: () => navigate(`/students/${s.id}`) },
+                    { label: '기록 추가', onClick: () => navigate('/input', { state: { studentId: s.id, studentName: s.name } }) },
+                    {
+                      label: '즐겨찾기 해제',
+                      onClick: async () => {
+                        await window.api.togglePin(s.id);
+                        window.api.getPinnedStudents().then(setPinned);
                       }
-                    ])
-                  }
-                >
-                  <span className="pinned-avatar">{initials(s.name)}</span>
-                  <span>{s.name}</span>
-                </button>
-              ))}
-            </div>
+                    }
+                  ])
+                }
+              >
+                <span className="pinned-avatar">{initials(s.name)}</span>
+                <span>{s.name}</span>
+                {s.grade != null && (
+                  <span style={{ color: 'var(--text-faint)', fontSize: 12 }}>
+                    {s.grade}-{s.class_no}
+                  </span>
+                )}
+                <span className="pinned-chevron">
+                  <ChevronRightIcon />
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       )}

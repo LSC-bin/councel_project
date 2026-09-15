@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import WindowControls from './components/WindowControls';
 import LockScreen from './components/LockScreen';
 import Dashboard from './pages/Dashboard';
 import RecordInput from './pages/RecordInput';
@@ -76,7 +77,11 @@ export default function App() {
   }
 
   if (hasPassword === null) {
-    return <div style={{ height: '100vh', background: 'var(--bg)' }} />;
+    return (
+      <div style={{ height: '100vh', background: 'var(--bg)' }}>
+        <WindowControls />
+      </div>
+    );
   }
 
   if (locked) {
@@ -100,6 +105,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <WindowControls />
       <Sidebar onLockNow={hasPassword ? () => setLocked(true) : undefined} />
       <div className="main-area">
         <main className="content">

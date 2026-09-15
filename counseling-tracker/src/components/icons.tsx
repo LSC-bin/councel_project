@@ -152,6 +152,23 @@ export function MinusIcon() {
   );
 }
 
+export function MaximizeIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
+      <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" />
+    </svg>
+  );
+}
+
+export function RestoreIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
+      <rect x="1.2" y="3.2" width="7.6" height="7.6" rx="1.4" />
+      <path d="M3.6 3.2V2.6c0-.8.6-1.4 1.4-1.4h5.8c.8 0 1.4.6 1.4 1.4v5.8c0 .8-.6 1.4-1.4 1.4h-.6" />
+    </svg>
+  );
+}
+
 export function ResetIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">

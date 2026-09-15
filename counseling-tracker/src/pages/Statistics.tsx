@@ -15,6 +15,7 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
+import { chartCss, useChartTheme } from '../utils/chartTheme';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend, Title, Filler);
 
@@ -28,6 +29,7 @@ const PERIOD_OPTIONS = [
 
 export default function Statistics() {
   const navigate = useNavigate();
+  const themeTick = useChartTheme();
   const [stats, setStats] = useState<MonthlyStats | null>(null);
   const [ranking, setRanking] = useState<{ student_id: number; name: string; grade: number | null; class_no: number | null; number: number | null; count: number }[]>([]);
   const [heatmap, setHeatmap] = useState<ClassHeatmapCell[]>([]);
@@ -78,9 +80,11 @@ export default function Statistics() {
   }, [heatmap]);
 
   function heatColor(count: number) {
-    if (count === 0) return 'var(--bg-panel)';
-    // 0~max 비례로 파란색 농도
+    if (count === 0) return 'transparent';
+    const dark = document.documentElement.dataset.theme === 'dark';
     const t = count / heat.max;
+    if (dark) return `rgba(10, 132, 255, ${0.18 + t * 0.62})`;
+    // 0~max 비례로 파란색 농도
     const light = 92 - t * 52; // 92% → 40%
     return `hsl(212, 55%, ${light}%)`;
   }
@@ -140,13 +144,16 @@ export default function Statistics() {
             <div className="card" style={{ flex: '2 1 420px' }}>
               <h2 className="section-title">월별 기록 건수</h2>
               <Bar
+                key={`bar-${themeTick}`}
                 data={{
                   labels: [...stats!.monthly].reverse().map((m) => m.month),
                   datasets: [
                     {
                       label: '기록 건수',
                       data: [...stats!.monthly].reverse().map((m) => m.count),
-                      backgroundColor: '#2383e2'
+                      backgroundColor: chartCss('--accent', '#007aff'),
+                      borderRadius: 6,
+                      maxBarThickness: 48
                     }
                   ]
                 }}
@@ -166,12 +173,15 @@ export default function Statistics() {
                 </div>
               ) : (
                 <Doughnut
+                  key={`doughnut-${themeTick}`}
                   data={{
                     labels: stats!.byType.map((t) => t.type_name),
                     datasets: [
                       {
                         data: stats!.byType.map((t) => t.count),
-                        backgroundColor: stats!.byType.map((t) => t.type_color)
+                        backgroundColor: stats!.byType.map((t) => t.type_color),
+                        borderColor: chartCss('--bg-card', 'rgba(255,255,255,0.6)'),
+                        borderWidth: 2
                       }
                     ]
                   }}
@@ -189,6 +199,7 @@ export default function Statistics() {
               </div>
             ) : (
               <Line
+                key={`line-${themeTick}`}
                 data={{ labels: trendData.months, datasets: trendData.datasets }}
                 options={{
                   responsive: true,

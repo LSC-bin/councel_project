@@ -16,17 +16,12 @@ function createWindow() {
     height: 800,
     minWidth: 960,
     minHeight: 640,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: '#f2f2f7',
     autoHideMenuBar: true,
-    // macOS: 네이티브 교통 신호등 버튼을 유지하면서 타이틀바를 콘텐츠에 통합(hiddenInset).
-    // 사이드바 vibrancy 영역이 타이틀바 역할을 하므로 frameless처럼 보이지만 시스템 버튼은 살아 있다.
-    ...(isMac
-      ? {
-          titleBarStyle: 'hiddenInset' as const,
-          trafficLightPosition: { x: 14, y: 14 },
-          vibrancy: 'sidebar' as const
-        }
-      : {}),
+    // 프레임리스: 상단 타이틀바 라인 자체를 없애고 콘텐츠로 꽉 채운다.
+    // 최소화/최대화/닫기는 렌더러의 커스텀 컨트롤(win-controls)이 담당.
+    frame: false,
+    ...(isMac ? { vibrancy: 'sidebar' as const, visualEffectState: 'active' as const } : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
@@ -360,6 +355,21 @@ app.whenReady().then(async () => {
   const opened = await db.initDatabase();
   registerIpcHandlers();
   ipcMain.handle('app:platform', () => process.platform);
+  // 커스텀 윈도우 컨트롤 (프레임리스 창)
+  ipcMain.handle('window:minimize', () => {
+    BrowserWindow.getFocusedWindow()?.minimize();
+  });
+  ipcMain.handle('window:toggleMaximize', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (!win) return false;
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+    return win.isMaximized();
+  });
+  ipcMain.handle('window:close', () => {
+    BrowserWindow.getFocusedWindow()?.close();
+  });
+  ipcMain.handle('window:isMaximized', () => BrowserWindow.getFocusedWindow()?.isMaximized() ?? false);
   createWindow();
   if (opened) {
     checkReminders();

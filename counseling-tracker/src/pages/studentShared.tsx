@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { ChevronRightIcon, TrendUpIcon, TrendDownIcon } from '../components/icons';
+import { useChartTheme, chartCss } from '../utils/chartTheme';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler, Tooltip);
 
@@ -211,6 +212,7 @@ export function scoreColor(score: number) {
 // - 기록마다 점수가 2점 이상 엇갈리면(서로 다른 기록에서 평가가 다르면) 라벨에 ⚠ 표시로 알려준다.
 // - 평균·건수·범위는 막대에 마우스를 올리면 툴팁으로 확인 가능.
 export function RelationScoreChart({ summary }: { summary: StudentRelationSummary }) {
+  const themeTick = useChartTheme();
   const entries = [
     ...summary.students.filter((s) => s.latestScore != null).map((s) => ({ label: s.name, ...s })),
     ...summary.others.filter((o) => o.latestScore != null).map((o) => ({ label: o.type, ...o }))
@@ -223,6 +225,7 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
       <div className="field-label">관계 점수 그래프 · 이 학생이 상대를 어떻게 느꼈는지 (최근 기록 기준)</div>
       <div style={{ height: 36 + entries.length * 34 }}>
         <Bar
+          key={`rel-${themeTick}`}
           data={{
             labels: entries.map((e) => (e.maxScore! - e.minScore! >= 2 ? `⚠ ${e.label}` : e.label)),
             datasets: [
@@ -308,6 +311,7 @@ export function DigestRecent({ digest, onOpenRecord }: { digest: StudentDigest; 
 
 // ---------- 학생 상태 점수 그래프 (라인) ----------
 export function ScoreLineChart({ series }: { series: { record_date: string; state_score: number }[] }) {
+  const themeTick = useChartTheme();
   if (series.length === 0) {
     return <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: 0 }}>상태 점수가 기록된 상담이 없습니다.</p>;
   }
@@ -341,13 +345,14 @@ export function ScoreLineChart({ series }: { series: { record_date: string; stat
       </div>
       <div style={{ height: Math.min(200, Math.max(120, 60 + series.length * 6)) }}>
         <Line
+          key={`scoreline-${themeTick}`}
           data={{
             labels: series.map((s) => s.record_date.slice(5)),
             datasets: [
               {
                 data: series.map((s) => s.state_score),
-                borderColor: '#2f6fb2',
-                backgroundColor: 'rgba(47, 111, 178, 0.08)',
+                borderColor: chartCss('--accent', '#007aff'),
+                backgroundColor: chartCss('--accent-bg', 'rgba(0, 122, 255, 0.1)'),
                 pointBackgroundColor: series.map((s) => scoreColor(s.state_score)),
                 pointBorderColor: series.map((s) => scoreColor(s.state_score)),
                 pointRadius: 4,
@@ -373,7 +378,7 @@ export function ScoreLineChart({ series }: { series: { record_date: string; stat
                 min: 1,
                 max: 5,
                 ticks: { stepSize: 1, precision: 0 },
-                grid: { color: '#e5eaf0' }
+                grid: { color: chartCss('--hairline', 'rgba(0,0,0,0.08)') }
               },
               x: { grid: { display: false }, ticks: { font: { size: 10.5 } } }
             }
