@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AlertIcon, CheckIcon } from '../components/icons';
 
 export default function ReportExport() {
   const [snapshots, setSnapshots] = useState<{ name: string; size: number; modified: string }[]>([]);
@@ -103,7 +104,9 @@ export default function ReportExport() {
 
       {message && (
         <div className={'banner ' + (message.tone === 'ok' ? 'banner-info' : '')} style={{ cursor: 'default' }}>
-          <span className="banner-icon">{message.tone === 'ok' ? '✓' : '!'}</span>
+          <span className="banner-icon">
+            {message.tone === 'ok' ? <CheckIcon /> : <AlertIcon />}
+          </span>
           <span>{message.text}</span>
         </div>
       )}

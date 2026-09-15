@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DocIcon } from '../components/icons';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -128,7 +129,9 @@ export default function Statistics() {
         <div className="card empty-state">불러오는 중…</div>
       ) : isEmpty ? (
         <div className="card empty-state">
-          <div className="empty-state-icon">▤</div>
+          <div className="empty-state-icon">
+            <DocIcon />
+          </div>
           <div>아직 통계를 낼 기록이 없습니다.</div>
         </div>
       ) : (

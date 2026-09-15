@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContextMenu } from '../components/ContextMenu';
 import StudentFilter, { EMPTY_STUDENT_FILTER, applyStudentFilter, type StudentFilterValue } from '../components/StudentFilter';
+import { MinusIcon, PlusIcon, ResetIcon } from '../components/icons';
 
 // 관계 점수(1~5) → 엣지 색. 1=빨강(갈등) … 5=초록(친밀). 점수 없으면 회색.
 export function edgeColor(score: number | null) {
@@ -310,12 +311,12 @@ export default function RelationGraphView() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <button type="button" className="btn btn-sm" onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))} title="축소">
-            −
+          <button type="button" className="btn btn-icon-square" onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))} title="축소">
+            <MinusIcon />
           </button>
           <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', minWidth: 38, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
-          <button type="button" className="btn btn-sm" onClick={() => setZoom((z) => Math.min(3, z + 0.25))} title="확대">
-            +
+          <button type="button" className="btn btn-icon-square" onClick={() => setZoom((z) => Math.min(3, z + 0.25))} title="확대">
+            <PlusIcon />
           </button>
           <button
             type="button"
@@ -326,7 +327,7 @@ export default function RelationGraphView() {
             }}
             title="배치 초기화"
           >
-            초기화
+            <ResetIcon /> 초기화
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
-import { FilterIcon } from './icons';
+import { CloseIcon, FilterIcon } from './icons';
 
 export interface StudentFilterValue {
   query: string; // '' = 전체
@@ -102,7 +102,8 @@ export default function StudentFilter({
             onTypeIdsChange?.([]);
           }}
         >
-          {activeLabel} ✕
+          {activeLabel}
+          <CloseIcon />
         </button>
       )}
 

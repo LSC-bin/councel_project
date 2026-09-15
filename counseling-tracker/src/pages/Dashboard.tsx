@@ -4,6 +4,7 @@ import MetricCard from '../components/MetricCard';
 import Calendar from '../components/Calendar';
 import ActionList from '../components/ActionList';
 import { useContextMenu } from '../components/ContextMenu';
+import { AlertIcon, PlusIcon } from '../components/icons';
 
 function initials(name: string) {
   return name.slice(0, 1);
@@ -60,7 +61,9 @@ export default function Dashboard() {
 
       {alerts.length > 0 && (
         <div className="banner" onClick={() => navigate('/search', { state: { studentId: alerts[0].student_id } })}>
-          <span className="banner-icon">⚠</span>
+          <span className="banner-icon">
+            <AlertIcon />
+          </span>
           <span>
             {alerts.map((a) => a.name).join(', ')} 학생 — 최근 14일간 기록 급증. 클릭해서 확인하세요.
           </span>
@@ -129,7 +132,7 @@ export default function Dashboard() {
                 최근 기록
               </h2>
               <button className="btn-icon" onClick={() => navigate('/search')} title="조회·검색으로 이동">
-                +
+                <PlusIcon />
               </button>
             </div>
             <div className="card" style={{ padding: 0 }}>

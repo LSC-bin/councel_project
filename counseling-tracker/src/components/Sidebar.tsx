@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LockIcon } from './icons';
+import {
+  LockIcon,
+  NavHomeIcon,
+  NavPencilIcon,
+  NavSearchIcon,
+  NavUsersIcon,
+  NavGraphIcon,
+  NavChartIcon,
+  NavArchiveIcon,
+  NavGearIcon
+} from './icons';
 
 const NAV_ITEMS = [
-  { to: '/', label: '대시보드', end: true },
-  { to: '/input', label: '기록 입력' },
-  { to: '/search', label: '조회·검색' },
-  { to: '/students', label: '학생 관리' },
-  { to: '/relations', label: '관계 그래프' },
-  { to: '/statistics', label: '통계' },
-  { to: '/report', label: '보고서·백업' },
-  { to: '/settings', label: '설정' }
+  { to: '/', label: '대시보드', icon: NavHomeIcon, end: true },
+  { to: '/input', label: '기록 입력', icon: NavPencilIcon },
+  { to: '/search', label: '조회·검색', icon: NavSearchIcon },
+  { to: '/students', label: '학생 관리', icon: NavUsersIcon },
+  { to: '/relations', label: '관계 그래프', icon: NavGraphIcon },
+  { to: '/statistics', label: '통계', icon: NavChartIcon },
+  { to: '/report', label: '보고서·백업', icon: NavArchiveIcon },
+  { to: '/settings', label: '설정', icon: NavGearIcon }
 ];
 
 export default function Sidebar({ onLockNow }: { onLockNow?: () => void }) {
@@ -45,7 +55,8 @@ export default function Sidebar({ onLockNow }: { onLockNow?: () => void }) {
             end={item.end}
             className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}
           >
-            {item.label}
+            <item.icon />
+            <span>{item.label}</span>
           </NavLink>
         ))}
       </nav>

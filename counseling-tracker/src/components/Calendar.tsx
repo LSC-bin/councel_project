@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { TrashIcon, EditIcon, CloseIcon, CheckIcon } from './icons';
+import { TrashIcon, EditIcon, CloseIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
 import Modal from './Modal';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -96,14 +96,14 @@ export default function Calendar({ prefillStudentId, prefillStudentName, onPrefi
   return (
     <div className="card calendar-card">
       <div className="calendar-header">
-        <button className="btn" onClick={() => goToMonth(-1)}>
-          ‹
+        <button className="btn btn-icon-square" onClick={() => goToMonth(-1)} title="이전 달">
+          <ChevronLeftIcon />
         </button>
         <div className="calendar-title">
           {viewMonth.getFullYear()}년 {viewMonth.getMonth() + 1}월
         </div>
-        <button className="btn" onClick={() => goToMonth(1)}>
-          ›
+        <button className="btn btn-icon-square" onClick={() => goToMonth(1)} title="다음 달">
+          <ChevronRightIcon />
         </button>
         <button
           className="btn"

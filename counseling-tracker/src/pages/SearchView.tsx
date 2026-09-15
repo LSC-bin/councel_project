@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FolderIcon, PlusIcon, ChevronRightIcon, DotsIcon } from '../components/icons';
+import { FolderIcon, PlusIcon, ChevronRightIcon, DotsIcon, SortIcon } from '../components/icons';
 import { useContextMenu } from '../components/ContextMenu';
 import Modal from '../components/Modal';
 import StudentFilter, { EMPTY_STUDENT_FILTER, type StudentFilterValue } from '../components/StudentFilter';
@@ -398,13 +398,13 @@ export default function SearchView() {
                 <thead>
                   <tr>
                     <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('date')} title="클릭: 날짜 정렬 전환">
-                      날짜 {sortKey === 'date' && (sortDir === 'asc' ? '↑' : '↓')}
+                      날짜 {sortKey === 'date' && <SortIcon dir={sortDir} />}
                     </th>
                     <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('name')} title="클릭: 이름 정렬 전환">
-                      학생 {sortKey === 'name' && (sortDir === 'asc' ? '↑' : '↓')}
+                      학생 {sortKey === 'name' && <SortIcon dir={sortDir} />}
                     </th>
                     <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('number')} title="클릭: 학년·반·번호 정렬 전환">
-                      학년/반/번호 {sortKey === 'number' && (sortDir === 'asc' ? '↑' : '↓')}
+                      학년/반/번호 {sortKey === 'number' && <SortIcon dir={sortDir} />}
                     </th>
                     <th>유형</th>
                     <th>내용</th>

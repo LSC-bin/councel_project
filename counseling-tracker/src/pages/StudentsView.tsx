@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, ProfileFields, StudentFormFields, formatClassInfo, useProfileFieldState } from './studentShared';
-import { PinIcon, PlusIcon } from '../components/icons';
+import { PinIcon, PlusIcon, SortIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import { useContextMenu } from '../components/ContextMenu';
 import StudentFilter, { EMPTY_STUDENT_FILTER, applyStudentFilter, type StudentFilterValue } from '../components/StudentFilter';
@@ -167,7 +167,8 @@ export default function StudentsView() {
               <tr>
                 {COLUMNS.map((c) => (
                   <th key={c.key} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => toggleSort(c.key)} title={`${c.label} 정렬 (다시 누르면 방향 전환)`}>
-                    {c.label} {sortKey === c.key && (sortDir === 'asc' ? '↑' : '↓')}
+                    {c.label}
+                    {sortKey === c.key && <SortIcon dir={sortDir} />}
                   </th>
                 ))}
                 <th>기록 건수</th>

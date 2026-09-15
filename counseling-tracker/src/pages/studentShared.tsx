@@ -10,7 +10,7 @@ import {
   Tooltip
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
-import { ChevronRightIcon } from '../components/icons';
+import { ChevronRightIcon, TrendUpIcon, TrendDownIcon } from '../components/icons';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler, Tooltip);
 
@@ -324,7 +324,17 @@ export function ScoreLineChart({ series }: { series: { record_date: string; stat
           현재 <strong style={{ color: scoreColor(last) }}>{last}점</strong>
           {trend && (
             <span style={{ color: trend === '호전' ? 'var(--success)' : trend === '악화' ? 'var(--danger)' : 'var(--text-secondary)', marginLeft: 6, fontWeight: 700 }}>
-              {trend === '호전' ? '▲ 호전' : trend === '악화' ? '▼ 악화' : '― 유지'}
+              {trend === '호전' ? (
+                <>
+                  <TrendUpIcon /> 호전
+                </>
+              ) : trend === '악화' ? (
+                <>
+                  <TrendDownIcon /> 악화
+                </>
+              ) : (
+                '유지'
+              )}
             </span>
           )}
         </span>
