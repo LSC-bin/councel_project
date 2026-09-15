@@ -77,7 +77,7 @@ export default function Sidebar({ onLockNow }: { onLockNow?: () => void }) {
           </button>
         </div>
       )}
-      <div className="sidebar-footer">v0.5.0 · 로컬 암호화 저장</div>
+      <div className="sidebar-footer">v0.5.1 · 로컬 암호화 저장</div>
     </aside>
   );
 }
