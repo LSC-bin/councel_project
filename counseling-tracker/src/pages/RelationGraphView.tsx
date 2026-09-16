@@ -119,6 +119,9 @@ export default function RelationGraphView() {
   const [zoom, setZoom] = useState(1);
   const [dragged, setDragged] = useState<{ id: number; dx: number; dy: number } | null>(null);
   const [manualPos, setManualPos] = useState<Map<number, Layout>>(new Map());
+  // 드래그(위치 이동)와 클릭(선택) 구분: 임계값 이상 움직였을 때만 movedRef=true → 클릭 선택 무시
+  const movedRef = useRef(false);
+  const dragStartRef = useRef<Layout | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -221,6 +224,8 @@ export default function RelationGraphView() {
     if (!p) return;
     const start = toSvgCoords(e.clientX, e.clientY);
     if (!start) return;
+    movedRef.current = false;
+    dragStartRef.current = start;
     setDragged({ id, dx: p.x - start.x, dy: p.y - start.y });
     e.stopPropagation();
   }
@@ -229,6 +234,10 @@ export default function RelationGraphView() {
     if (!dragged) return;
     const p = toSvgCoords(e.clientX, e.clientY);
     if (!p) return;
+    // 클릭 중 미세한 흔들림(≤3px)은 드래그로 보지 않는다
+    const s = dragStartRef.current;
+    if (s && Math.hypot(p.x - s.x, p.y - s.y) <= 3) return;
+    movedRef.current = true;
     setManualPos((cur) => {
       const next = new Map(cur);
       next.set(dragged.id, {
@@ -424,7 +433,10 @@ export default function RelationGraphView() {
                     key={n.id}
                     style={{ cursor: dragged?.id === n.id ? 'grabbing' : 'grab' }}
                     onMouseDown={(e) => handleNodeMouseDown(e, n.id)}
-                    onClick={() => !dragged && setSelectedId(isSel ? null : n.id)}
+                    onClick={() => {
+                      // 드래그로 노드를 옮긴 경우에는 선택(관계 필터)을 토글하지 않는다
+                      if (!movedRef.current) setSelectedId(isSel ? null : n.id);
+                    }}
                     onDoubleClick={() => navigate(`/students/${n.id}`)}
                     onContextMenu={(e) =>
                       ctx.open(e, [

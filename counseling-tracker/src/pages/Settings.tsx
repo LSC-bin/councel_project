@@ -1,7 +1,28 @@
 import { useEffect, useState } from 'react';
 import { TrashIcon } from '../components/icons';
+import Tabs from '../components/Tabs';
+
+// 설정 탭: 데이터 / 기록·유형 / 보안 / 화면 / 안내
+type SettingsTab = 'data' | 'record' | 'security' | 'display' | 'info';
+
+const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
+  { key: 'data', label: '데이터' },
+  { key: 'record', label: '기록·유형' },
+  { key: 'security', label: '보안' },
+  { key: 'display', label: '화면' },
+  { key: 'info', label: '안내' }
+];
+
+const TAB_SUBTITLE: Record<SettingsTab, string> = {
+  data: '학생 명부 등록, 데이터 이관, 학년도 전환을 관리합니다.',
+  record: '기록 유형·빠른 템플릿, 입력 기본값, 위기 탐지 기준을 관리합니다.',
+  security: '상담 기록 암호화와 앱 잠금을 관리합니다.',
+  display: '화면 테마를 선택합니다.',
+  info: '개인정보 처리 안내입니다.'
+};
 
 export default function Settings({ onSettingsChanged }: { onSettingsChanged?: () => void }) {
+  const [tab, setTab] = useState<SettingsTab>('data');
   const [students, setStudents] = useState<Student[]>([]);
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -35,46 +56,56 @@ export default function Settings({ onSettingsChanged }: { onSettingsChanged?: ()
     <div>
       <div className="page-header">
         <h1 className="page-title">설정</h1>
-        <p className="page-subtitle">학생 명부, 기록 유형, 앱 환경을 관리합니다.</p>
+        <p className="page-subtitle">{TAB_SUBTITLE[tab]}</p>
       </div>
 
-      <div className="section">
-        <h2 className="section-title">학생 명부</h2>
-        <div className="card">
-          <p style={{ color: 'var(--text-secondary)', marginTop: 0 }}>
-            엑셀 파일(학년도 · 학년 · 반 · 번호 · 이름, 선택: 보호자 · 연락처 · 주소 · 특이사항 · 메모)을 업로드해 학생 명부를 일괄 등록하세요.
-            이미 등록된 학생(이름·학년도·학년·반·번호 동일)은 자동으로 건너뜁니다. 학생 관리 화면에서도 같은 버튼을 쓸 수 있습니다.
-          </p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" disabled={importing} onClick={handleImport}>
-              {importing ? '가져오는 중…' : '명부 업로드'}
-            </button>
-            <button className="btn" onClick={() => window.api.downloadStudentTemplate()}>
-              명부 양식 다운로드
-            </button>
+      <div style={{ marginBottom: 18 }}>
+        <Tabs tabs={SETTINGS_TABS} active={tab} onChange={setTab} />
+      </div>
+
+      {tab === 'data' && (
+        <>
+          <div className="section">
+            <h2 className="section-title">학생 명부</h2>
+            <div className="card">
+              <p style={{ color: 'var(--text-secondary)', marginTop: 0 }}>
+                엑셀 파일(학년도 · 학년 · 반 · 번호 · 이름, 선택: 보호자 · 연락처 · 주소 · 특이사항 · 메모)을 업로드해 학생 명부를 일괄 등록하세요.
+                이미 등록된 학생(이름·학년도·학년·반·번호 동일)은 자동으로 건너뜁니다. 학생 관리 화면에서도 같은 버튼을 쓸 수 있습니다.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" disabled={importing} onClick={handleImport}>
+                  {importing ? '가져오는 중…' : '명부 업로드'}
+                </button>
+                <button className="btn" onClick={() => window.api.downloadStudentTemplate()}>
+                  명부 양식 다운로드
+                </button>
+              </div>
+              {message && <p style={{ color: 'var(--success)', fontSize: 13, marginTop: 10 }}>{message}</p>}
+              <p style={{ color: 'var(--text-faint)', fontSize: 12.5, marginTop: 14, marginBottom: 0 }}>
+                현재 등록된 학생: {students.length}명
+              </p>
+            </div>
           </div>
-          {message && <p style={{ color: 'var(--success)', fontSize: 13, marginTop: 10 }}>{message}</p>}
-          <p style={{ color: 'var(--text-faint)', fontSize: 12.5, marginTop: 14, marginBottom: 0 }}>
-            현재 등록된 학생: {students.length}명
-          </p>
-        </div>
-      </div>
 
-      <AppLockSettings onSettingsChanged={onSettingsChanged} />
+          <DataTransferSettings />
 
-      <RecordTypeSettings />
+          <SchoolYearSettings />
+        </>
+      )}
 
-      <InputDefaultSettings />
+      {tab === 'record' && (
+        <>
+          <RecordTypeSettings />
+          <InputDefaultSettings />
+          <CrisisThresholdSettings />
+        </>
+      )}
 
-      <CrisisThresholdSettings />
+      {tab === 'security' && <AppLockSettings onSettingsChanged={onSettingsChanged} />}
 
-      <ThemeSettings />
+      {tab === 'display' && <ThemeSettings />}
 
-      <DataTransferSettings />
-
-      <SchoolYearSettings />
-
-      <PrivacyNotice />
+      {tab === 'info' && <PrivacyNotice />}
     </div>
   );
 }

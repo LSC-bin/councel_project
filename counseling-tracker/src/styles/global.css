@@ -533,6 +533,48 @@ html[data-theme='dark'] .sidebar-badge.urgent {
   background: var(--bg-active);
 }
 
+/* ---------- 세그먼트 탭 (macOS 세그먼트 컨트롤 스타일, 플랫) ---------- */
+.seg-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-content);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+}
+
+.seg-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: calc(var(--radius) - 3px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast);
+  font-family: inherit;
+}
+
+.seg-tab:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.seg-tab-active,
+.seg-tab-active:hover {
+  background: var(--bg-group);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.seg-tabs-sm .seg-tab {
+  font-size: 12px;
+  padding: 3px 10px;
+}
+
 /* ---------- 그룹 (Settings inset group: 단색, 그림자 없음) ---------- */
 .card {
   background: var(--bg-group);

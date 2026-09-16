@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar, ProfileFields, StudentFormFields, formatClassInfo, useProfileFieldState } from './studentShared';
 import { PinIcon, PlusIcon, SortIcon } from '../components/icons';
 import Modal from '../components/Modal';
+import Tabs from '../components/Tabs';
 import { useContextMenu } from '../components/ContextMenu';
 import StudentFilter, { EMPTY_STUDENT_FILTER, applyStudentFilter, type StudentFilterValue } from '../components/StudentFilter';
 
@@ -26,6 +27,7 @@ export default function StudentsView() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [addTab, setAddTab] = useState<'manual' | 'excel'>('manual');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
@@ -120,37 +122,48 @@ export default function StudentsView() {
         <div style={{ flex: '1 1 260px', minWidth: 220 }}>
           <StudentFilter value={filter} onChange={setFilter} />
         </div>
-        <button className="btn" style={{ whiteSpace: 'nowrap' }} disabled={importing} onClick={handleExcelImport} title="엑셀 파일로 학생을 일괄 등록합니다">
-          {importing ? '가져오는 중…' : '엑셀 일괄 등록'}
-        </button>
         <button
-          className="btn"
+          className="btn btn-primary"
           style={{ whiteSpace: 'nowrap' }}
-          onClick={() => window.api.downloadStudentTemplate()}
-          title="학년도·학년·반·번호·이름·보호자 등 컬럼이 들어간 엑셀 양식을 저장합니다"
+          onClick={() => {
+            setAddTab('manual');
+            setImportResult(null);
+            setAdding(true);
+          }}
         >
-          명부 양식 다운로드
-        </button>
-        <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }} onClick={() => setAdding(true)}>
           <PlusIcon /> 학생 추가
         </button>
-        {importResult && (
-          <p style={{ flexBasis: '100%', margin: 0, fontSize: 12.5, color: importResult.tone === 'ok' ? 'var(--success)' : 'var(--danger)' }}>
-            {importResult.text}
-          </p>
-        )}
       </div>
 
       {adding && (
         <Modal title="학생 추가" onClose={() => setAdding(false)} maxWidth={560}>
-          <AddStudentForm
-            onCancel={() => setAdding(false)}
-            onAdded={(s) => {
-              setAdding(false);
-              refresh();
-              navigate(`/students/${s.id}`);
-            }}
-          />
+          <div style={{ marginBottom: 14 }}>
+            <Tabs
+              tabs={[
+                { key: 'manual', label: '직접 입력' },
+                { key: 'excel', label: '엑셀 등록' }
+              ]}
+              active={addTab}
+              onChange={setAddTab}
+            />
+          </div>
+          {addTab === 'manual' ? (
+            <AddStudentForm
+              onCancel={() => setAdding(false)}
+              onAdded={(s) => {
+                setAdding(false);
+                refresh();
+                navigate(`/students/${s.id}`);
+              }}
+            />
+          ) : (
+            <ExcelImportPanel
+              importing={importing}
+              result={importResult}
+              onImport={handleExcelImport}
+              onClose={() => setAdding(false)}
+            />
+          )}
         </Modal>
       )}
 
@@ -290,6 +303,50 @@ function AddStudentForm({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
         </button>
         <button className="btn" onClick={onCancel}>
           취소
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 학생 추가 모달의 '엑셀 등록' 탭: 명부 양식 다운로드 + 일괄 등록을 한곳에서.
+function ExcelImportPanel({
+  importing,
+  result,
+  onImport,
+  onClose
+}: {
+  importing: boolean;
+  result: { tone: 'ok' | 'err'; text: string } | null;
+  onImport: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
+        엑셀 파일(학년도 · 학년 · 반 · 번호 · 이름, 선택: 보호자 · 연락처 · 주소 · 특이사항 · 메모)로 학생 명부를 일괄 등록합니다.
+        이미 등록된 학생(이름·학년도·학년·반·번호 동일)은 자동으로 건너뜁니다.
+      </p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" disabled={importing} onClick={onImport}>
+          {importing ? '가져오는 중…' : '엑셀 파일 선택 후 등록'}
+        </button>
+        <button
+          className="btn"
+          onClick={() => window.api.downloadStudentTemplate()}
+          title="학년도·학년·반·번호·이름·보호자 등 컬럼이 들어간 엑셀 양식을 저장합니다"
+        >
+          명부 양식 다운로드
+        </button>
+      </div>
+      {result && (
+        <p style={{ fontSize: 12.5, color: result.tone === 'ok' ? 'var(--success)' : 'var(--danger)', marginTop: 10, marginBottom: 0 }}>
+          {result.text}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 10 }}>
+        <button className="btn" onClick={onClose}>
+          닫기
         </button>
       </div>
     </div>
