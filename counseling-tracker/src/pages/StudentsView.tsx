@@ -113,9 +113,7 @@ export default function StudentsView() {
     <div>
       <div className="page-header">
         <h1 className="page-title">학생 관리</h1>
-        <p className="page-subtitle">
-          학생 정보를 확인·수정하고, 학생별 전체 기록을 한눈에 봅니다. 열 제목을 눌러 정렬하고, 행을 우클릭하면 빠른 메뉴가 열립니다.
-        </p>
+
       </div>
 
       <div className="card" style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -227,9 +225,7 @@ export default function StudentsView() {
           </table>
         )}
       </div>
-      <p style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 6 }}>
-        {sorted.length}명 표시 중 · 정렬: {COLUMNS.find((c) => c.key === sortKey)?.label} {sortDir === 'asc' ? '오름차순' : '내림차순'}
-      </p>
+
       {ctx.element}
     </div>
   );
@@ -323,10 +319,7 @@ function ExcelImportPanel({
 }) {
   return (
     <div>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-        엑셀 파일(학년도 · 학년 · 반 · 번호 · 이름, 선택: 보호자 · 연락처 · 주소 · 특이사항 · 메모)로 학생 명부를 일괄 등록합니다.
-        이미 등록된 학생(이름·학년도·학년·반·번호 동일)은 자동으로 건너뜁니다.
-      </p>
+
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button className="btn btn-primary" disabled={importing} onClick={onImport}>
           {importing ? '가져오는 중…' : '엑셀 파일 선택 후 등록'}

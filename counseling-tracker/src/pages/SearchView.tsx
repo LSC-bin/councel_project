@@ -315,9 +315,7 @@ export default function SearchView() {
     <div>
       <div className="page-header">
         <h1 className="page-title">조회·검색</h1>
-        <p className="page-subtitle">
-          폴더·학생·기간·유형으로 기록을 검색하고 정리합니다. 기록 행을 폴더로 끌어다 놓으면 이동됩니다.
-        </p>
+
       </div>
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -390,9 +388,7 @@ export default function SearchView() {
             {rootFolders.map((f) => renderFolderRow(f, 0))}
           </div>
           {folderError && <p style={{ color: 'var(--danger)', fontSize: 11.5, padding: '4px 8px 0', margin: 0 }}>{folderError}</p>}
-          <p style={{ color: 'var(--text-faint)', fontSize: 11, padding: '6px 8px 0', margin: 0 }}>
-            폴더를 폴더 위로 끌면 하위로, 목록 여백으로 끌면 최상위로 이동합니다. 더블클릭 또는 점3개 메뉴로 이름을 바꿉니다.
-          </p>
+
         </div>
 
         {/* 우: 필터 + 결과 */}

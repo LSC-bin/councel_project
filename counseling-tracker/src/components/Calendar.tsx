@@ -114,7 +114,7 @@ export default function Calendar({ prefillStudentId, prefillStudentName, onPrefi
         </button>
       </div>
 
-      <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: '0 0 8px' }}>날짜를 더블클릭하면 예약을 보고 추가할 수 있습니다.</p>
+
 
       <div className="calendar-grid calendar-weekdays">
         {WEEKDAYS.map((w) => (

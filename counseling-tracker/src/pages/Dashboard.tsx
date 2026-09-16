@@ -63,7 +63,7 @@ export default function Dashboard() {
     <div>
       <div className="page-header">
         <h1 className="page-title">대시보드</h1>
-        <p className="page-subtitle">오늘의 예약과 최근 기록, 대기 중인 조치를 한눈에</p>
+
       </div>
 
       {alerts.length > 0 && (

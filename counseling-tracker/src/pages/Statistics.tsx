@@ -114,7 +114,7 @@ export default function Statistics() {
     <div>
       <div className="page-header">
         <h1 className="page-title">통계</h1>
-        <p className="page-subtitle">월별·유형별 기록 추이, 반별 분포를 확인합니다.</p>
+
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           <label className="field-label" style={{ marginBottom: 0 }}>
             기간
@@ -208,9 +208,7 @@ export default function Statistics() {
                 }}
               />
             )}
-            <p style={{ fontSize: 11.5, color: 'var(--text-faint)', margin: '6px 0 0' }}>
-              특정 유형(예: 학교폭력)이 늘어나는 추세를 월 단위로 파악할 수 있습니다.
-            </p>
+
           </div>
 
           {heat.grades.length > 0 && (
@@ -254,9 +252,7 @@ export default function Statistics() {
                   </tbody>
                 </table>
               </div>
-              <p style={{ fontSize: 11.5, color: 'var(--text-faint)', margin: '6px 0 0' }}>
-                색이 진할수록 기록이 많은 반입니다. 상담이 특정 반에 몰리는지 한눈에 확인할 수 있습니다.
-              </p>
+
             </div>
           )}
 

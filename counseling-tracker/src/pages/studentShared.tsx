@@ -262,9 +262,7 @@ export function RelationScoreChart({ summary }: { summary: StudentRelationSummar
           }}
         />
       </div>
-      <p style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 4, marginBottom: 0 }}>
-        막대는 가장 최근 기록의 점수입니다. ⚠ 표시는 기록마다 점수가 크게 엇갈린 경우입니다.
-      </p>
+
     </div>
   );
 }

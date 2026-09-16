@@ -150,7 +150,7 @@ export default function RecordInput() {
     <div>
       <div className="page-header">
         <h1 className="page-title">기록 입력</h1>
-        <p className="page-subtitle">상담 내용과 후속 조치를 기록합니다</p>
+
       </div>
       <div className="input-grid">
         <div className="input-col-left">
@@ -223,7 +223,7 @@ export default function RecordInput() {
                   )}
                   {students.length === 0 && (
                     <p style={{ color: 'var(--text-faint)', fontSize: 12.5, marginTop: 6 }}>
-                      등록된 학생이 없습니다. 설정에서 명부를 먼저 업로드하세요.
+                      등록된 학생이 없습니다.
                     </p>
                   )}
                 </>

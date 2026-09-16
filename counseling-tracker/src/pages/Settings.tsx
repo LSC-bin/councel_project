@@ -13,14 +13,6 @@ const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
   { key: 'info', label: '안내' }
 ];
 
-const TAB_SUBTITLE: Record<SettingsTab, string> = {
-  data: '학생 명부 등록, 데이터 이관, 학년도 전환을 관리합니다.',
-  record: '기록 유형·빠른 템플릿, 입력 기본값, 위기 탐지 기준을 관리합니다.',
-  security: '상담 기록 암호화와 앱 잠금을 관리합니다.',
-  display: '화면 테마를 선택합니다.',
-  info: '개인정보 처리 안내입니다.'
-};
-
 export default function Settings({ onSettingsChanged }: { onSettingsChanged?: () => void }) {
   const [tab, setTab] = useState<SettingsTab>('data');
   const [students, setStudents] = useState<Student[]>([]);
@@ -56,7 +48,6 @@ export default function Settings({ onSettingsChanged }: { onSettingsChanged?: ()
     <div>
       <div className="page-header">
         <h1 className="page-title">설정</h1>
-        <p className="page-subtitle">{TAB_SUBTITLE[tab]}</p>
       </div>
 
       <div style={{ marginBottom: 18 }}>
@@ -68,10 +59,6 @@ export default function Settings({ onSettingsChanged }: { onSettingsChanged?: ()
           <div className="section">
             <h2 className="section-title">학생 명부</h2>
             <div className="card">
-              <p style={{ color: 'var(--text-secondary)', marginTop: 0 }}>
-                엑셀 파일(학년도 · 학년 · 반 · 번호 · 이름, 선택: 보호자 · 연락처 · 주소 · 특이사항 · 메모)을 업로드해 학생 명부를 일괄 등록하세요.
-                이미 등록된 학생(이름·학년도·학년·반·번호 동일)은 자동으로 건너뜁니다. 학생 관리 화면에서도 같은 버튼을 쓸 수 있습니다.
-              </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn btn-primary" disabled={importing} onClick={handleImport}>
                   {importing ? '가져오는 중…' : '명부 업로드'}
@@ -139,9 +126,6 @@ function InputDefaultSettings() {
     <div className="section">
       <h2 className="section-title">기록 입력 기본값</h2>
       <div className="card" style={{ maxWidth: 480 }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-          기록 입력 화면을 열 때 미리 선택될 기본 유형·폴더를 지정합니다. 자주 쓰는 유형이 정해져 있다면 매번 고르지 않아도 됩니다.
-        </p>
         <div className="field">
           <label className="field-label">기본 기록 유형</label>
           <select className="select" value={defaultTypeId} onChange={(e) => setDefaultTypeId(e.target.value)}>
@@ -198,9 +182,6 @@ function CrisisThresholdSettings() {
     <div className="section">
       <h2 className="section-title">위기 학생 탐지 기준</h2>
       <div className="card" style={{ maxWidth: 480 }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-          "최근 N일 안에 기록이 M건 이상"인 학생을 대시보드에서 위기 감지 대상으로 표시합니다. 상담이 잦아지는 학생을 빨리 알아챌 수 있습니다.
-        </p>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div>
             <label className="field-label">기간 (일)</label>
@@ -248,7 +229,6 @@ function ThemeSettings() {
             다크
           </button>
         </div>
-        <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: '8px 0 0' }}>야간 상담·어두운 사무실에서 눈이 편한 다크 테마를 사용할 수 있습니다.</p>
       </div>
     </div>
   );
@@ -298,9 +278,6 @@ function DataTransferSettings() {
     <div className="section">
       <h2 className="section-title">데이터 내보내기 · 가져오기</h2>
       <div className="card" style={{ maxWidth: 480 }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-          전체 데이터(학생·상담 기록·조치·예약·폴더 등)를 JSON 파일로 내보내거나 다른 PC에서 가져올 수 있습니다. 암호화 백업(.backup)과 달리 다른 프로그램으로 이관할 때 쓰는 형식이며, 개인정보가 평문으로 담기므로 파일 관리에 주의하세요.
-        </p>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <button className="btn btn-primary btn-sm" disabled={busy} onClick={handleExport}>
             JSON 내보내기
@@ -375,9 +352,6 @@ function SchoolYearSettings() {
     <div className="section">
       <h2 className="section-title">학년도 전환</h2>
       <div className="card" style={{ maxWidth: 480 }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-          새 학년이 되면 현재 학생들을 지난 학년도로 아카이브하세요. 상담 기록·조치사항은 모두 보존되고, 학생 목록에서만 숨겨집니다.
-        </p>
         <div style={{ display: 'flex', gap: 6 }}>
           <input
             className="input"
@@ -467,9 +441,6 @@ function RecordTypeSettings() {
   return (
     <div className="section">
       <h2 className="section-title">기록 유형 관리</h2>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: -6, marginBottom: 12 }}>
-        상담뿐 아니라 출결·칭찬·학부모연락 등 학생과 관련된 어떤 기록이든 유형을 만들어 남길 수 있습니다.
-      </p>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <div className="card" style={{ flex: '1 1 320px', padding: 0 }}>
           {types.length === 0 ? (
@@ -730,9 +701,8 @@ function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void
       <div className="card" style={{ maxWidth: 420 }}>
         {encryptionEnabled ? (
           <>
-            <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
-              상담 기록이 비밀번호로 암호화되어 있습니다. 프로그램을 열 때마다 비밀번호를 입력해야 기록을 볼 수 있습니다.
-              비밀번호를 잊으면 기록을 복구할 수 없으니 주의하세요.
+            <p style={{ color: 'var(--danger)', fontSize: 12, marginTop: 0 }}>
+              주의: 비밀번호를 잊으면 기록을 복구할 수 없습니다.
             </p>
             {!verified ? (
               <>
@@ -755,25 +725,15 @@ function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void
                     암호화 해제
                   </button>
                 </div>
-                <p style={{ color: 'var(--text-faint)', fontSize: 12, marginTop: 8, marginBottom: 0 }}>
-                  암호화 해제는 현재 비밀번호 확인 후 진행됩니다. 비밀번호 변경은 아래 "앱 잠금"에서 하면 기록 암호화 비밀번호도 함께 바뀝니다.
-                </p>
               </>
             ) : (
               <>
                 {message && <p style={{ color: 'var(--success)', fontSize: 12.5, marginTop: 0 }}>{message}</p>}
-                <p style={{ color: 'var(--text-faint)', fontSize: 12, marginBottom: 0 }}>
-                  비밀번호가 확인되었습니다. 비밀번호를 변경하려면 아래 "앱 잠금" 섹션을 사용하세요 (기록 암호화 비밀번호도 함께 변경됩니다). 암호화를 해제하려면 앱을 다시 열고 이 화면에서 해제하세요.
-                </p>
               </>
             )}
           </>
         ) : (
           <>
-            <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
-              비밀번호를 설정하면 상담 기록 전체(DB 파일)가 그 비밀번호로 암호화됩니다.
-              프로그램을 열 때마다 비밀번호를 입력해야 기록을 볼 수 있고, 파일만 복사해서는 내용을 알 수 없습니다.
-            </p>
             <div className="field">
               <label className="field-label">진입 비밀번호 (4자 이상)</label>
               <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
@@ -798,9 +758,6 @@ function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void
       <div className="card" style={{ maxWidth: 420 }}>
         {hasPassword && !verified ? (
           <>
-            <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
-              변경하거나 해제하려면 먼저 현재 비밀번호를 확인하세요.
-            </p>
             <div className="field">
               <label className="field-label">현재 비밀번호</label>
               <input
@@ -819,11 +776,6 @@ function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void
           </>
         ) : (
           <>
-            <p style={{ color: 'var(--text-secondary)', marginTop: 0, fontSize: 13 }}>
-              {hasPassword
-                ? '새 비밀번호를 입력해 변경하거나, 앱 잠금을 해제할 수 있습니다.'
-                : '비밀번호를 설정하면 다음 실행부터 앱 시작 시 잠금 화면이 표시됩니다.'}
-            </p>
             <div className="field">
               <label className="field-label">{hasPassword ? '새 비밀번호' : '설정할 비밀번호'}</label>
               <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
@@ -868,9 +820,6 @@ function AppLockSettings({ onSettingsChanged }: { onSettingsChanged?: () => void
             <option value="30">30분 뒤 자동 잠금</option>
             <option value="60">1시간 뒤 자동 잠금</option>
           </select>
-          <p style={{ color: 'var(--text-faint)', fontSize: 12, margin: '6px 0 0' }}>
-            조작이 없으면 설정한 시간 뒤에 잠금 화면이 표시됩니다. 사이드바 "지금 잠금" 버튼으로 즉시 잠글 수도 있습니다.
-          </p>
         </div>
       </div>
     </div>

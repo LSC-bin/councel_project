@@ -117,7 +117,7 @@ export default function ReportExport() {
     <div>
       <div className="page-header">
         <h1 className="page-title">보고서·백업</h1>
-        <p className="page-subtitle">익명화 통계 내보내기와 암호화 백업·복원을 관리합니다.</p>
+
       </div>
 
       {message && (
@@ -132,9 +132,7 @@ export default function ReportExport() {
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <div className="card" style={{ flex: '1 1 300px' }}>
           <div className="section-title">익명화 통계 내보내기</div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-            학생명을 A학생·B학생…으로 치환한 엑셀 통계를 생성합니다. 회의·보고용으로 개인정보를 드러내지 않고 공유할 수 있습니다.
-          </p>
+
           <button className="btn btn-primary" disabled={busy === 'anon'} onClick={handleAnonymized}>
             {busy === 'anon' ? '생성 중…' : '엑셀 내보내기'}
           </button>
@@ -142,9 +140,7 @@ export default function ReportExport() {
 
         <div className="card" style={{ flex: '1 1 300px' }}>
           <div className="section-title">상담 실적 보고서 (보고·나이스 첨부용)</div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-            월별·유형별·학년반별 실적과 기록 상세를 담은 엑셀을 생성합니다. 학생 실명이 포함되므로 교내 보고용으로만 사용하세요.
-          </p>
+
           <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
             <input className="input" type="date" style={{ width: 140 }} value={niceStart} onChange={(e) => setNiceStart(e.target.value)} title="시작일(선택)" />
             <input className="input" type="date" style={{ width: 140 }} value={niceEnd} onChange={(e) => setNiceEnd(e.target.value)} title="종료일(선택)" />
@@ -156,9 +152,7 @@ export default function ReportExport() {
 
         <div className="card" style={{ flex: '1 1 340px' }}>
           <div className="section-title">암호화 백업 / 복원</div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-            모든 상담 데이터를 비밀번호 기반 AES-256 암호화 파일(.backup)로 저장합니다. PC 교체나 인수인계 시 이 파일 하나면 전체 기록을 옮길 수 있습니다.
-          </p>
+
 
           {backupMode === 'none' && (
             <div style={{ display: 'flex', gap: 8 }}>
@@ -213,9 +207,7 @@ export default function ReportExport() {
 
       <div className="card" style={{ marginTop: 10 }}>
         <div className="section-title">자동 백업 스냅샷</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 0 }}>
-          앱이 시작할 때와 30분마다 이 PC에 암호화 스냅샷을 자동 저장합니다(최근 7개 보관). 실수로 데이터를 지웠을 때 직전 상태로 되돌릴 수 있습니다.
-        </p>
+
         {snapshotMsg && (
           <p style={{ fontSize: 12.5, color: snapshotMsg.tone === 'ok' ? 'var(--success)' : 'var(--danger)' }}>{snapshotMsg.text}</p>
         )}
@@ -283,9 +275,7 @@ export default function ReportExport() {
             {showAudit ? '접기' : `펼치기 (${audit.length}건)`}
           </button>
         </div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 6, marginBottom: 0 }}>
-          기록 열람·수정·삭제·인쇄 이력이 이 PC에 암호화 상태로 보존됩니다. 원본을 고쳐도 이력은 지워지지 않습니다.
-        </p>
+
         {showAudit && (
           <table className="record-table audit-table" style={{ marginTop: 8 }}>
             <thead>

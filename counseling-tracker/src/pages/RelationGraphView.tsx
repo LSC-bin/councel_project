@@ -260,9 +260,7 @@ export default function RelationGraphView() {
     <div>
       <div className="page-header">
         <h1 className="page-title">관계 그래프</h1>
-        <p className="page-subtitle">
-          학생 간 관계(갈등·친밀)를 그래프로 봅니다. 노드는 드래그로 옮길 수 있고, 우클릭하면 빠른 메뉴가 열립니다.
-        </p>
+
       </div>
 
       <div className="card" style={{ marginBottom: 8, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -346,11 +344,7 @@ export default function RelationGraphView() {
           {visibleEdges.length === 0 ? (
             <div className="empty-state">
               <div>{graph.edges.length === 0 ? '아직 학생 간 관계 기록이 없습니다.' : '조건에 맞는 관계가 없습니다.'}</div>
-              {graph.edges.length === 0 && (
-                <p style={{ fontSize: 12, marginTop: 4, color: 'var(--text-faint)' }}>
-                  기록 입력에서 "관련 대상"을 학생으로 지정하고 관계 점수를 남기면 그래프에 표시됩니다.
-                </p>
-              )}
+
             </div>
           ) : (
             <svg
@@ -560,9 +554,7 @@ export default function RelationGraphView() {
         </span>
       </div>
 
-      <p style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 6 }}>
-        노드 클릭 = 그 학생의 관계만 보기 · 더블클릭/우클릭 = 프로필·빠른 메뉴 · 노드 드래그 = 위치 조정 · 선 굵기 = 언급 횟수 · 노드 크기 = 연결 수 · 실선 = 양방향 기록, 점선 = 한쪽 기록만
-      </p>
+
       {ctx.element}
     </div>
   );
