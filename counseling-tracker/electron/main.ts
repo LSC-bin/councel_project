@@ -355,21 +355,21 @@ app.whenReady().then(async () => {
   const opened = await db.initDatabase();
   registerIpcHandlers();
   ipcMain.handle('app:platform', () => process.platform);
-  // 커스텀 윈도우 컨트롤 (프레임리스 창)
-  ipcMain.handle('window:minimize', () => {
-    BrowserWindow.getFocusedWindow()?.minimize();
+  // 커스텀 윈도우 컨트롤 (프레임리스 창) — 포커스와 무관하게 호출한 웹컨텐츠의 창을 사용
+  ipcMain.handle('window:minimize', (e) => {
+    BrowserWindow.fromWebContents(e.sender)?.minimize();
   });
-  ipcMain.handle('window:toggleMaximize', () => {
-    const win = BrowserWindow.getFocusedWindow();
+  ipcMain.handle('window:toggleMaximize', (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
     if (!win) return false;
     if (win.isMaximized()) win.unmaximize();
     else win.maximize();
     return win.isMaximized();
   });
-  ipcMain.handle('window:close', () => {
-    BrowserWindow.getFocusedWindow()?.close();
+  ipcMain.handle('window:close', (e) => {
+    BrowserWindow.fromWebContents(e.sender)?.close();
   });
-  ipcMain.handle('window:isMaximized', () => BrowserWindow.getFocusedWindow()?.isMaximized() ?? false);
+  ipcMain.handle('window:isMaximized', (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false);
   createWindow();
   if (opened) {
     checkReminders();

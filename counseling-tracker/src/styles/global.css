@@ -6,7 +6,7 @@
   --bg-content: #f4f4f6;
   --bg-group: #ffffff;
   --bg-chrome: rgba(246, 246, 248, 0.78);
-  --bg-elevated: rgba(250, 250, 252, 0.85);
+  --bg-elevated-glass: rgba(250, 250, 252, 0.85);
   --bg-hover: rgba(0, 0, 0, 0.045);
   --bg-active: rgba(0, 0, 0, 0.08);
   --bg-control: #ffffff;
@@ -35,6 +35,12 @@
   --radius-sm: 6px;
   --radius-pill: 999px;
 
+  /* 레거시 별칭 (컴포넌트 인라인 스타일 호환) */
+  --bg-card: var(--bg-group);
+  --bg-panel: var(--bg-content);
+  --bg-sidebar: var(--bg-chrome);
+  --bg-elevated: var(--bg-elevated-glass);
+
   --spring: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out-soft: cubic-bezier(0.25, 0.1, 0.25, 1);
   --t-fast: 0.16s;
@@ -52,7 +58,7 @@ html[data-theme='dark'] {
   --bg-content: #2a2a2c;
   --bg-group: #1e1e20;
   --bg-chrome: rgba(42, 42, 44, 0.78);
-  --bg-elevated: rgba(48, 48, 50, 0.85);
+  --bg-elevated-glass: rgba(48, 48, 50, 0.85);
   --bg-hover: rgba(255, 255, 255, 0.07);
   --bg-active: rgba(255, 255, 255, 0.12);
   --bg-control: #3a3a3c;
@@ -156,6 +162,12 @@ button {
   align-items: center;
   gap: 0;
   -webkit-app-region: no-drag;
+}
+
+/* 페이지 헤더(드래그 영역) 내부로 포털된 경우: 헤더 우측에 인라인 배치 */
+.win-controls.in-header {
+  position: static;
+  margin-left: auto;
 }
 
 .win-btn {
