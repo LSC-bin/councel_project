@@ -18,6 +18,9 @@ function createWindow() {
     minHeight: 640,
     backgroundColor: '#f2f2f7',
     autoHideMenuBar: true,
+    icon: fs.existsSync(path.join(__dirname, '../../build/icon.png'))
+      ? path.join(__dirname, '../../build/icon.png')
+      : undefined,
     // 프레임리스: 상단 타이틀바 라인 자체를 없애고 콘텐츠로 꽉 채운다.
     // 최소화/최대화/닫기는 렌더러의 커스텀 컨트롤(win-controls)이 담당.
     frame: false,

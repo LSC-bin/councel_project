@@ -2,8 +2,11 @@ appId: com.edut1287.counseling-tracker
 productName: 상담기록관리
 directories:
   output: release
+icon: build/icon.ico
 win:
   target: portable
+  signAndEditExecutable: false
 files:
   - out/**/*
   - package.json
+  - build/icon.png
