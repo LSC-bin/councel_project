@@ -11,7 +11,8 @@
     "build": "tsc --noEmit && electron-vite build",
     "build:win": "npm run build && electron-builder --win",
     "test": "tsx --test tests/*.test.ts",
-    "seed:demo": "electron scripts/seed-demo.js"
+    "seed:demo": "electron scripts/seed-demo.js",
+    "make:demo-json": "node scripts/make-demo-json.mjs"
   },
   "dependencies": {
     "chart.js": "^4.4.4",
